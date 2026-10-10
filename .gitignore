@@ -103,3 +103,6 @@ screenshot.py
 
 # 热更发布物（按需由脚本生成上传，不进仓库）
 Android/hot-bundle/
+
+# 热更已改走 GitHub Releases 资产，仓库 hot/ 目录不再使用
+hot/
