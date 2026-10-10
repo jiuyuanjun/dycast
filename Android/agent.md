@@ -17,7 +17,7 @@
   - 签名：Android SDK build-tools（zipalign + apksigner）
   - 调试：adb / emulator / Chrome DevTools Protocol
 - **核心功能**：连接抖音直播间、拉取弹幕/礼物/进入&关注&粉丝团信息、登录抖音账号、横屏三栏直播页。
-- **当前版本**：v1.3.0（versionCode: 26；发布渠道：Gitee Releases + 飞书，见第 17 节。v1.3.0 为**原生通知后端版**：通知链路下沉 Rust，后台不再依赖 WebView，详见 17.8）
+- **当前版本**：v1.3.9（发布渠道：GitHub Releases + 飞书，见第 15 节。v1.3.0 为**原生通知后端版**：通知链路下沉 Rust，后台不再依赖 WebView，详见 17.8）
 
 ---
 
@@ -683,7 +683,7 @@ node scripts\test-webview.mjs
 
 ### 发布自动化补充（2026-09-06）
 
-飞书发布文件夹（folder-token `KUWzf6phnlApZSdAwBActyUrnke`）执行"保留至多两版"策略（最新版 + 1 个历史回滚版本，防止新版严重 bug 无法使用时回退；Gitee 更新源仍只留最新）：
+飞书发布文件夹（folder-token `KUWzf6phnlApZSdAwBActyUrnke`）执行"保留至多两版"策略（最新版 + 1 个历史回滚版本，防止新版严重 bug 无法使用时回退；GitHub 更新源仍只留最新）：
 
 1. 上传新包：`cd <apk所在目录> && lark-cli drive +upload --file ./<apk文件名> --folder-token KUWzf6phnlApZSdAwBActyUrnke`（CLI 要求相对路径）。
 2. 列出全部 token：`lark-cli drive files list --folder-token KUWzf6phnlApZSdAwBActyUrnke`。
@@ -695,13 +695,15 @@ node scripts\test-webview.mjs
 
 ---
 
-## 15. 版本自动更新机制（v1.1.3 新增，2026-09-06）
+## 15. 版本自动更新机制（v1.1.3 新增，2026-09-06；更新源 2026-10-10 从 Gitee 迁至 GitHub）
+
+> **渠道迁移**：Gitee 仓库已被平台封禁（API 404 / raw 403），更新通道不可达。已整体迁移到 GitHub 公开仓库 `jiuyuanjun/dycast`（默认分支 `public-clean`，仅含源码、无构建产物/密钥）。APK 通过 GitHub Releases 公开发布，App 免登录检查/下载。
 
 ### 架构
 ```
 App 启动（4s 后）/ 设置 → 关于 → 检查更新
   → Rust `fetch_text` 命令（reqwest + 桌面 UA，绕 CORS）
-  → Gitee 免登录 API：https://gitee.com/api/v5/repos/jiuyuanjun/dycast/releases/latest
+  → GitHub 免登录 API：https://api.github.com/repos/jiuyuanjun/dycast/releases/latest
   → semver 比较（@tauri-apps/api/app getVersion）
   → 发现新版本弹窗（复用 search-dialog 样式，"暂不"按版本记忆）
   → 立即更新 → Kotlin UpdaterHelper.startApkDownload（系统 DownloadManager 下载到 Downloads，通知栏进度）
@@ -712,7 +714,8 @@ App 启动（4s 后）/ 设置 → 关于 → 检查更新
 ### 关键文件
 - `src-tauri/src/updater.rs`：`fetch_text` / `download_apk`（应用内进度下载）/ `apk_downloaded` / `install_apk` / `start_apk_download`（系统下载兜底）/ `open_unknown_source_settings` 命令
 - `src-tauri/gen/android/app/src/main/java/com/dycast/app/UpdaterHelper.kt`：下载 + 安装拉起
-- `src/utils/updater.ts`：`checkUpdate` / `downloadUpdate` / `compareVersion` / 24h 节流与"暂不"记忆
+- `src/utils/updater.ts`：`checkUpdate` / `downloadUpdate` / `compareVersion` / 24h 节流与"暂不"记忆；更新源 `UPDATE_SOURCE`（默认机 jiuyuanjun/dycast）
+- `src/utils/hotUpdate.ts`：热更清单地址 `HOT_MANIFEST_URL`（GitHub raw `public-clean` 分支）
 - `src/components/UpdateDialog.vue`：更新弹窗（App.vue 全局挂载 `<UpdateDialog auto />`，设置页通过 ref 手动触发）
 - AndroidManifest：`REQUEST_INSTALL_PACKAGES` 权限
 
@@ -721,17 +724,23 @@ App 启动（4s 后）/ 设置 → 关于 → 检查更新
 cd Android
 node scripts/build-apk.cjs --bump --notes "更新说明"   # 推荐（2026-09-17 起）
 # 版本号 4 处同步 → 前端构建 → assets 清空重建 → cargo tauri android build --apk --target aarch64
-# → zipalign+apksigner → Gitee Release（删旧）→ 飞书上传（保留最新+1 回滚）→ 摘要
-# 详见 17.3，旧脚本 scripts/release.ps1 仍可用但不推荐
+# → zipalign+apksigner → 上传 APK 到 GitHub Releases → 飞书上传（保留最新+1 回滚）→ 摘要
+```
+
+### GitHub Releases 发布命令（gh CLI）
+```bash
+# 为当前版本打 tag 并创建 Release（assets 指向构建好的 APK）
+gh release create "v1.4.0" Android/output/dycast-1.4.0-arm64.apk --title "v1.4.0" --notes "更新说明"
+# 更新既有 tag 的资产（重新上传相同版本 APK）：gh release upload … --clobber
 ```
 
 ### 已知约束与坑
-1. **Gitee attach_files 必须 multipart/form-data**（curl -F），不接受 octet-stream 直传 body。
-2. **`/releases/latest` 包含 prerelease**——临时测试 Release 会被正式版用户检测到，测试完必须删除。**代码侧已加防呆（v1.1.6 起）**：`updater.ts` 解析到 `data.prerelease === true` 直接忽略，测试版不再被正式用户检测到；但 Gitee 上的正式 Release 仍是唯一更新源，测试版不删仍会顶掉正式版的位置（latest 语义）。
+1. **GitHub Releases 资产公开直链**：`browser_download_url` 即 `https://github.com/{owner}/{repo}/releases/download/{tag}/{name}`，App 下载时直接用，无需鉴权。APK 不得依赖私有资产（私有仓库 Releases 匿名访问会 401）。
+2. **`/releases/latest` 包含 prerelease**——临时测试 Release 会被正式版用户检测到，测试完必须删除。**代码侧已加防呆（v1.1.6 起）**：`updater.ts` 解析到 `data.prerelease === true` 直接忽略，测试版不再被正式用户检测到；但 Release 的 latest 语义下测试版仍会顶掉正式版，测试完必须删除。
 3. **WebView 缓存陷阱**：`adb install -r` 保留应用数据，WebView 会继续用缓存里的旧 index.html；验证新包务必 `adb shell pm clear com.dycast.app`。
 4. **stale assets 同步问题**：中断 cargo tauri 构建可能导致 `gen/android/app/src/main/assets/` 残留旧前端（APK 打旧 JS）。现象：APK 内 JS hash 与 dist 不一致。**已由 `scripts/build-apk.cjs` 从流程上根治**：assets 步骤"先清空再重建"并比对 dist 与 assets 文件集合；构建后解包 APK 再比对内嵌 js+css 与 dist，不一致直接失败（退出码 2）。手工修复方式（备用）：删掉该目录下 index.html/assets/mssdk.js 后手动 `cp dist/*` 同步再构建。
 5. 模拟器镜像可能缺 DownloadProvider（下载入队后无进展），下载+安装环节需真机验证。
-6. Gitee 私人令牌在 `scripts/gitee-token.txt`（已 gitignore），泄露需在 Gitee 后台撤销重建。
+6. 公开仓库安全：签名 keystore、lark token、构建产物一律不进仓库（已在 .gitignore 与公共分支排除）。github token 通过 `gh auth login`（keyring）管理。
 
 ### Bug 16：静默检查发现新版本不弹窗（v1.1.6 修复，2026-09-12）
 - **问题**：`UpdateDialog.vue` 的 `onMounted` 静默检查逻辑写反——只在 `hasUpdate && isDismissed` 时把 `visible` 置 false，但 `visible` 默认就是 false，发现新版本时从未置 true，**启动后自动检查永远不弹窗**，只有设置页手动检查能用。

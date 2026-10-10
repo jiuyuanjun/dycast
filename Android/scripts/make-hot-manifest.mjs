@@ -10,7 +10,7 @@
  * 发布：把 hot-bundle/files/ 内的全部文件按原相对路径上传到 --base 对应地址，
  *       再把 hot-bundle/manifest.json 上传到清单地址
  *       （默认清单地址见 src/utils/hotUpdate.ts 的 HOT_MANIFEST_URL，
- *       即 Gitee 仓库 hot/manifest.json，推送 master 即生效）。
+ *       即 GitHub 仓库 hot/manifest.json，推送 public-clean 分支即生效）。
  * 注意：mssdk.js 在 index.html 头部单独加载、不走热更引导，托管目录中无需包含也能正常启动。
  */
 import fs from 'node:fs';
@@ -45,7 +45,7 @@ if (!fs.existsSync(distDir)) {
 }
 if (!argMap.base || typeof argMap.base !== 'string') {
   console.error('缺少 --base <URL>（文件托管地址前缀，需以 / 结尾），例如：\n'
-    + '  node scripts/make-hot-manifest.mjs --base https://gitee.com/jiuyuanjun/dycast/raw/master/hot/1.3.6.1/');
+    + '  node scripts/make-hot-manifest.mjs --base https://raw.githubusercontent.com/jiuyuanjun/dycast/public-clean/hot/1.3.9.1/');
   process.exit(1);
 }
 const base = argMap.base.endsWith('/') ? argMap.base : `${argMap.base}/`;
