@@ -9,11 +9,11 @@
 import { invoke } from '@tauri-apps/api/core';
 
 /**
- * 默认热更清单地址：GitHub 仓库 hot/manifest.json（master 分支）。
+ * 默认热更清单地址：GitHub 仓库 hot/manifest.json（public-clean 分支，与默认分支一致）。
  * 原 Gitee raw 已被平台封禁（403），改走 GitHub；manifest 需随前端构建产物推送到
- * 仓库 `hot/` 目录（由 scripts/make-hot-manifest.mjs 生成后 commit 到 hot 分支或 master）。
+ * 仓库 `hot/` 目录（由 scripts/make-hot-manifest.mjs 生成后 commit 到默认分支）。
  */
-export const HOT_MANIFEST_URL = 'https://raw.githubusercontent.com/jiuyuanjun/dycast/master/hot/manifest.json';
+export const HOT_MANIFEST_URL = 'https://raw.githubusercontent.com/jiuyuanjun/dycast/public-clean/hot/manifest.json';
 
 const BOOT_KEY = 'dycast_hot_boot';
 
@@ -54,7 +54,7 @@ export function getActiveHotVersion(): string | null {
   }
 }
 
-/** 检查热更新：默认检查 Gitee 仓库的发布清单；可显式传入 URL 测试新清单。 */
+/** 检查热更新：默认检查 GitHub 仓库的发布清单；可显式传入 URL 测试新清单。 */
 export async function checkHotUpdate(manifestUrl: string = HOT_MANIFEST_URL): Promise<HotCheckInfo> {
   const info = await invoke<HotCheckInfo>('hot_check', { manifestUrl });
   // APK 已升级导致旧热更失配：清掉本地启动标记，回退内置资源
