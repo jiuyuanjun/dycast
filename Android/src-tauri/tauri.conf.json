@@ -1,0 +1,50 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "抖音直播弹幕助手",
+  "version": "1.3.9",
+  "identifier": "com.dycast.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "抖音直播弹幕助手",
+        "width": 400,
+        "height": 800,
+        "minWidth": 0,
+        "minHeight": 0,
+        "resizable": true,
+        "fullscreen": false,
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": [],
+    "externalBin": [],
+    "copyright": "",
+    "category": "Utility",
+    "shortDescription": "抖音直播弹幕助手 Android 客户端",
+    "longDescription": "基于 Tauri 的抖音直播弹幕助手 Android 客户端，支持弹幕、礼物、进入关注等消息通知与后台保活。",
+    "android": {
+      "minSdkVersion": 24,
+      "versionCode": 35
+    }
+  }
+}

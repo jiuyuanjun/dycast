@@ -1,0 +1,105 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+.DS_Store
+dist
+dist-ssr
+coverage
+*.local
+
+/cypress/videos/
+/cypress/screenshots/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+*.tsbuildinfo
+
+test/
+gitee-token.txt
+
+# 签名密钥（不进公开仓库）
+Android/keystore/
+*.keystore
+*.jks
+
+# 发布产物/临时文件（不进公开仓库）
+.feishu-upload-state.json
+temp-gitee-req.json
+temp-gitee-res.json
+
+# 构建产物（不进仓库）
+Android/src-tauri/target/
+Android/src-tauri/gen/android/
+Android/src-tauri/gen/app/
+Android/output/
+Android/dist/
+Android/logs/
+Android/screenshots/
+Android/pages/
+
+# 历史备份 / 临时辅助（不进仓库）
+Windows_legacy_backup/
+apk_extract/
+apk_extract2/
+window_dump.xml
+ui.xml
+tmp_screenshot_notify.py
+navigate.js
+navigate.py
+cdp-test.ps1
+logs_gitlog.txt
+logs_gitlog2.txt
+logs_gitstatus2.txt
+feishu_auth_qr.png
+prototype-confirm.png
+*.apk
+*.zip
+
+# 编辑器/工具目录
+.trae/
+.workbuddy/
+.zcode/
+
+# Windows 桌面版构建产物 / 内部工具（不进公开仓库）
+Windows/src-tauri/target/
+Windows/src-tauri/gen/
+Windows/打包/
+Windows/skills/
+Windows/.agents/
+Windows/node_modules/
+Windows/dist/
+Windows/output/
+Windows/test_connect.py
+Windows/server.py
+
+# 项目外部技能/工作区（与本应用无关）
+.agents/
+.workbuddy/
+.zcode/
+.trae/
+tasks/
+prototype-*
+logs_git*
+
+# 杂项测试文件
+test-js.*
+skills-lock.json
+screenshot.py
+
+# 热更发布物（按需由脚本生成上传，不进仓库）
+Android/hot-bundle/

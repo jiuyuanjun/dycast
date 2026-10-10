@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DyCast Android - 自适应布局原型</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{background:#0f0f1a;display:flex;flex-direction:column;align-items:center;padding:24px 12px 60px;min-height:100vh}
+.scheme-title{color:#c9c9e0;font-size:13px;margin-bottom:20px;text-align:center;line-height:1.7;max-width:1300px}
+.scheme-title b{color:#fff;font-size:18px;display:block;margin-bottom:6px}
+.scheme-title .tag{display:inline-block;background:#2a2a4a;color:#8ec5ff;font-size:11px;padding:2px 10px;border-radius:10px;margin:0 3px}
+.stage{display:flex;gap:48px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+.col{display:flex;flex-direction:column;align-items:center}
+.col-label{color:#ffd166;font-size:14px;font-weight:700;margin-bottom:14px;padding:6px 18px;background:#2a2a4a;border-radius:16px;border:1px solid #3a3a5e}
+
+/* ===== 手机外观 ===== */
+.phone{background:#1a1a2e;border:7px solid #05050a;box-shadow:0 20px 60px rgba(0,0,0,.7);position:relative;overflow:hidden;display:flex;flex-direction:column}
+.phone.p{width:390px;height:844px;border-radius:42px}
+.phone.h{width:844px;height:390px;border-radius:42px}
+/* 竖屏刘海 */
+.phone.p::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);width:126px;height:28px;background:#05050a;border-radius:0 0 20px 20px;z-index:30}
+/* 横屏侧边打孔 */
+.phone.h::before{content:"";position:absolute;left:12px;top:24px;width:14px;height:14px;background:#05050a;border-radius:50%;z-index:30;box-shadow:0 0 0 2px #111}
+
+/* 状态栏 */
+.statusbar{background:#1a1a2e;display:flex;justify-content:space-between;align-items:center;color:#fff;font-weight:600;flex-shrink:0;z-index:5}
+.phone.p .statusbar{height:38px;padding:10px 20px 4px;font-size:12px}
+.phone.h .statusbar{height:28px;padding:0 18px 0 40px;font-size:10px}
+.bar-sig{display:flex;gap:1.5px;align-items:flex-end}
+.bar-sig i{display:block;width:2.5px;background:#fff;border-radius:1px}
+.bar-sig i:nth-child(1){height:3px}.bar-sig i:nth-child(2){height:5px}.bar-sig i:nth-child(3){height:7px}.bar-sig i:nth-child(4){height:9px;opacity:.4}
+.statusbar .right{display:flex;gap:5px;align-items:center}
+.batt{border:1.5px solid #fff;border-radius:2px;position:relative;padding:1px}
+.phone.p .batt{width:20px;height:10px}.phone.h .batt{width:16px;height:8px}
+.batt::after{content:"";position:absolute;right:-3px;top:2px;width:2px;height:3px;background:#fff;border-radius:0 2px 2px 0}
+.batt i{display:block;width:78%;height:100%;background:#5fd35f;border-radius:1px}
+.wifi{position:relative}
+.phone.p .wifi{width:13px;height:9px}.phone.h .wifi{width:11px;height:7px}
+.wifi i{position:absolute;bottom:0;left:50%;transform:translateX(-50%);border:1.5px solid #fff;border-bottom:none;border-radius:50% 50% 0 0}
+.wifi i:nth-child(1){width:100%;height:70%}.wifi i:nth-child(2){width:55%;height:40%}.wifi i:nth-child(3){width:22%;height:18%;border-radius:50%}
+
+/* ===============================
+   竖屏 - 手机模式
+   =============================== */
+.p .app{flex:1;display:flex;flex-direction:column;overflow:hidden}
+/* 顶部栏 - 避让刘海后安全区 */
+.p .topbar{height:48px;background:#20203a;display:flex;align-items:center;gap:6px;padding:0 12px;flex-shrink:0;border-bottom:1px solid #2c2c4e}
+.p .room-input{flex:1;min-width:0;height:34px;background:#1a1a2e;border:1px solid #3a3a5e;border-radius:17px;padding:0 14px;color:#fff;font-size:13px;outline:none}
+.p .room-input::placeholder{color:#6a6a8a}
+.p .connect-btn{height:34px;padding:0 14px;background:linear-gradient(135deg,#5b6cff,#8e6cff);color:#fff;border:none;border-radius:17px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+.p .key-btn{width:34px;height:34px;background:#2a2a4a;border:1px solid #3a3a5e;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative}
+.p .key-btn .dot{position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%}
+.p .key-btn .dot.on{background:#3ddc84}.p .key-btn .dot.off{background:#ff5252}
+.key-icon{display:inline-block;width:16px;height:16px;border:3px solid #8a8aaa;border-radius:4px;position:relative}
+.key-icon::after{content:"";position:absolute;top:4px;left:5px;width:6px;height:7px;border-left:2px solid #8a8aaa;border-bottom:2px solid #8a8aaa}
+.key-btn.active .key-icon{border-color:#3ddc84}.key-btn.active .key-icon::after{border-color:#3ddc84}
+
+/* 弹幕流 */
+.p .msg-area{flex:1;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.p .msg-area::-webkit-scrollbar{width:3px}
+.p .msg-area::-webkit-scrollbar-thumb{background:#3a3a5e;border-radius:2px}
+.p .msg-item{display:flex;align-items:flex-start;gap:8px;padding:6px 8px;background:rgba(42,42,74,.35);border-radius:8px}
+.p .msg-avatar{width:26px;height:26px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:700}
+.p .msg-body{flex:1;min-width:0}
+.p .msg-user{font-size:11px;color:#8ec5ff;margin-bottom:2px;font-weight:600}
+.p .msg-text{font-size:13px;color:#e8e8f0;line-height:1.4;word-break:break-all}
+.p .msg-text.gift{color:#ffd166}
+.p .msg-text.enter{color:#69f0ae}
+.p .msg-text.follow{color:#ff80ab}
+
+/* 底部 Tab */
+.p .tabbar{height:54px;background:#20203a;display:flex;flex-shrink:0;border-top:1px solid #2c2c4e;padding-bottom:6px}
+.p .tab-btn{flex:1;border:none;background:transparent;color:#6a6a8a;font-size:11px;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.p .tab-btn.active{color:#8e6cff}
+.p .tab-icon{width:20px;height:20px;border-radius:5px;border:2px solid currentColor}
+.p .tab-icon.gift{border-radius:3px}
+.p .tab-icon.chart{border-radius:50%}
+.p .tab-btn.active .tab-icon{background:currentColor;opacity:.3}
+
+/* Tab 内容 - 礼物 */
+.p .gift-list{flex:1;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.p .gift-item{display:flex;align-items:center;gap:8px;padding:8px;background:rgba(42,42,74,.35);border-radius:8px}
+.p .gift-avatar{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:700}
+.p .gift-info{flex:1;min-width:0}
+.p .gift-user{font-size:11px;color:#8ec5ff;font-weight:600}
+.p .gift-name{font-size:12px;color:#ffd166;margin-top:2px}
+.p .gift-count{font-size:18px;font-weight:800;color:#ffd166;flex-shrink:0}
+
+/* Tab 内容 - 数据 */
+.p .data-grid{flex:1;overflow-y:auto;padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.p .data-card{background:rgba(42,42,74,.5);border-radius:10px;padding:14px 10px;text-align:center}
+.p .data-card .label{font-size:10px;color:#8a8aaa;margin-bottom:6px}
+.p .data-card .value{font-size:20px;font-weight:800;color:#fff}
+.p .data-card.blue .value{color:#8ec5ff}.p .data-card.gold .value{color:#ffd166}.p .data-card.green .value{color:#69f0ae}.p .data-card.pink .value{color:#ff80ab}
+
+/* ===============================
+   横屏 - 平板模式
+   =============================== */
+.h .app{flex:1;display:flex;overflow:hidden}
+/* 左面板 */
+.h .left-panel{width:200px;background:#20203a;display:flex;flex-direction:column;flex-shrink:0;border-right:1px solid #2c2c4e}
+.h .left-top{padding:6px 8px;border-bottom:1px solid #2c2c4e}
+.h .left-room{display:flex;gap:4px}
+.h .left-room input{flex:1;min-width:0;height:28px;background:#1a1a2e;border:1px solid #3a3a5e;border-radius:14px;padding:0 10px;color:#fff;font-size:11px;outline:none}
+.h .left-room input::placeholder{color:#6a6a8a}
+.h .left-room button{height:28px;padding:0 8px;background:linear-gradient(135deg,#5b6cff,#8e6cff);color:#fff;border:none;border-radius:14px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+.h .left-sid{padding:8px;border-bottom:1px solid #2c2c4e}
+.h .sid-card{display:flex;align-items:center;gap:6px;background:#1a1a2e;border-radius:8px;padding:6px}
+.h .sid-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#ff9a56,#ff5252);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;font-weight:700}
+.h .sid-info{flex:1;min-width:0;overflow:hidden}
+.h .sid-name{font-size:11px;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.h .sid-fans{font-size:9px;color:#8a8aaa;margin-top:1px}
+.h .sid-key{width:24px;height:24px;background:#2a2a4a;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;position:relative}
+.h .sid-key .dot{position:absolute;top:1px;right:1px;width:5px;height:5px;border-radius:50%;background:#3ddc84}
+.h .left-info{flex:1;overflow-y:auto;padding:6px 8px}
+.h .left-info::-webkit-scrollbar{width:3px}.h .left-info::-webkit-scrollbar-thumb{background:#3a3a5e;border-radius:2px}
+.h .info-item{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:10px;border-bottom:1px solid rgba(60,60,94,.3)}
+.h .info-item .lbl{color:#8a8aaa}
+.h .info-item .val{color:#fff;font-weight:600}
+
+/* 中间弹幕 */
+.h .center{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.h .center-header{height:28px;background:#20203a;display:flex;align-items:center;padding:0 10px;border-bottom:1px solid #2c2c4e;font-size:10px;color:#8a8aaa;font-weight:600}
+.h .msg-area{flex:1;overflow-y:auto;padding:6px 8px;display:flex;flex-direction:column;gap:4px}
+.h .msg-area::-webkit-scrollbar{width:3px}.h .msg-area::-webkit-scrollbar-thumb{background:#3a3a5e;border-radius:2px}
+.h .msg-item{display:flex;align-items:flex-start;gap:6px;padding:4px 6px;background:rgba(42,42,74,.3);border-radius:6px}
+.h .msg-avatar{width:20px;height:20px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700}
+.h .msg-body{flex:1;min-width:0}
+.h .msg-user{font-size:9px;color:#8ec5ff;font-weight:600}
+.h .msg-text{font-size:11px;color:#e8e8f0;line-height:1.3;word-break:break-all}
+.h .msg-text.gift{color:#ffd166}.h .msg-text.enter{color:#69f0ae}.h .msg-text.follow{color:#ff80ab}
+
+/* 右面板 */
+.h .right-panel{width:200px;background:#20203a;display:flex;flex-direction:column;flex-shrink:0;border-left:1px solid #2c2c4e}
+.h .right-tabs{display:flex;border-bottom:1px solid #2c2c4e}
+.h .right-tab{flex:1;padding:6px;background:transparent;border:none;color:#6a6a8a;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent}
+.h .right-tab.active{color:#8e6cff;border-bottom-color:#8e6cff}
+.h .right-content{flex:1;overflow-y:auto;padding:6px}
+.h .right-content::-webkit-scrollbar{width:3px}.h .right-content::-webkit-scrollbar-thumb{background:#3a3a5e;border-radius:2px}
+.h .gift-item{display:flex;align-items:center;gap:5px;padding:5px 6px;background:rgba(42,42,74,.3);border-radius:6px;margin-bottom:4px}
+.h .gift-avatar{width:20px;height:20px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700}
+.h .gift-info{flex:1;min-width:0;overflow:hidden}
+.h .gift-user{font-size:9px;color:#8ec5ff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.h .gift-name{font-size:10px;color:#ffd166;margin-top:1px}
+.h .gift-count{font-size:14px;font-weight:800;color:#ffd166;flex-shrink:0}
+.h .enter-item{display:flex;align-items:center;gap:5px;padding:4px 6px;font-size:10px;border-radius:6px;margin-bottom:3px}
+.h .enter-item .ea{width:16px;height:16px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:700}
+.h .enter-item .et{color:#69f0ae}
+.h .enter-item .et.follow{color:#ff80ab}
+
+/* sessionid 输入弹窗 */
+.modal-overlay{position:absolute;inset:0;background:rgba(0,0,0,.6);z-index:50;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:#1a1a2e;border:1px solid #3a3a5e;border-radius:14px;padding:20px;width:300px}
+.modal h3{color:#fff;font-size:15px;margin-bottom:12px;text-align:center}
+.modal input{width:100%;height:36px;background:#0f0f1a;border:1px solid #3a3a5e;border-radius:8px;padding:0 12px;color:#fff;font-size:13px;outline:none;margin-bottom:10px}
+.modal input::placeholder{color:#6a6a8a}
+.modal .guide{font-size:10px;color:#8a8aaa;line-height:1.5;margin-bottom:12px;padding:8px;background:rgba(0,0,0,.2);border-radius:6px}
+.modal .guide b{color:#ffd166}
+.modal .btn-row{display:flex;gap:8px}
+.modal .btn-cancel{flex:1;height:32px;background:#2a2a4a;border:none;border-radius:8px;color:#8a8aaa;font-size:12px;cursor:pointer;font-family:inherit}
+.modal .btn-save{flex:1;height:32px;background:linear-gradient(135deg,#5b6cff,#8e6cff);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+</style>
+</head>
+<body>
+<div class="scheme-title">
+  <b>DyCast Android - 自适应布局</b>
+  <span class="tag">竖屏=手机模式</span> <span class="tag">横屏=平板模式</span> <span class="tag">安全区避让摄像头</span>
+  <br>竖屏时顶部状态栏留出刘海安全区，横屏时左侧留出打孔摄像头安全区
+</div>
+
+<div class="stage">
+  <!-- ============ 竖屏 ============ -->
+  <div class="col">
+    <div class="col-label">竖屏 / 手机模式</div>
+    <div class="phone p">
+      <!-- 状态栏 - 高度预留刘海安全区 -->
+      <div class="statusbar">
+        <span>9:41</span>
+        <span class="right"><span class="bar-sig"><i></i><i></i><i></i><i></i></span><span class="wifi"><i></i><i></i><i></i></span><span class="batt"><i></i></span></span>
+      </div>
+      <div class="app">
+        <!-- 顶部栏 -->
+        <div class="topbar">
+          <input class="room-input" placeholder="输入房间号或链接" value="719059168053">
+          <button class="connect-btn">连接</button>
+          <div class="key-btn active" onclick="toggleSidModal('p')">
+            <span class="key-icon"></span>
+            <span class="dot on"></span>
+          </div>
+        </div>
+        <!-- 弹幕流 -->
+        <div class="msg-area" id="p-msg">
+          <div class="msg-item"><div class="msg-avatar" style="background:linear-gradient(135deg,#ff9a56,#ff5252)">L</div><div class="msg-body"><div class="msg-user">辣条妹妹</div><div class="msg-text">欢迎大家来到直播间～</div></div></div>
+          <div class="msg-item"><div class="msg-avatar" style="background:linear-gradient(135deg,#667eea,#764ba2)">A</div><div class="msg-body"><div class="msg-user">爱笑的眼睛</div><div class="msg-text">主播好漂亮啊</div></div></div>
+          <div class="msg-item"><div class="msg-avatar" style="background:linear-gradient(135deg,#f093fb,#f5576c)">X</div><div class="msg-body"><div class="msg-user">小幸运呀</div><div class="msg-text">这首歌叫什么名字</div></div></div>
+          <div class="msg-item"><div class="msg-avatar" style="background:linear-gradient(135deg,#4facfe,#00f2fe)">W</div><div class="msg-body"><div class="msg-user">温柔的风</div><div class="msg-text">来啦来啦 支持主播</div></div></div>
+          <div class="msg-item"><div class="msg-avatar" style="background:linear-gradient(135deg,#ffd166,#ff9a56)">T</div><div class="msg-body"><div class="msg-user">天天开心</div><div class="msg-text">送了一个 火箭</div></div></div>
+          <div class="msg-item"><div class="msg-avatar" style="background:linear-gradient(135deg,#a8edea,#fed6e3)">B</div><div class="msg-body"><div class="msg-user">笨笨熊</div><div class="msg-text">关注啦 期待下播</div></div></div>
+          <div class="msg-item"><div class="msg-avatar" style="background:linear-gradient(135deg,#d299c2,#9b6cae)">H</div><div class="msg-body"><div class="msg-user">花儿朵朵</div><div class="msg-text">主播声音好好听</div></div></div>
+          <div class="msg-item"><div class="msg-avatar" style="background:linear-gradient(135deg,#84fab0,#8fd3f4)">S</div><div class="msg-body"><div class="msg-user">盛夏的果实</div><div class="msg-text">能不能点一首晴天</div></div></div>
+          <div class="msg-item"><div class="msg-avatar" style="background:linear-gradient(135deg,#ffecd2,#fcb69f)">Y</div><div class="msg-body"><div class="msg-user">椰子鸡</div><div class="msg-text">主播好有趣哈哈哈</div></div></div>
+          <div class="msg-item"><div class="msg-avatar" style="background:linear-gradient(135deg,#c2e9fb,#a1c4fd)">M</div><div class="msg-body"><div class="msg-user">迷路的猫</div><div class="msg-text">第一次来 感觉不错</div></div></div>
+        </div>
+        <!-- 底部 Tab -->
+        <div class="tabbar">
+          <button class="tab-btn active" onclick="pTab('msg')"><span class="tab-icon"></span>弹幕</button>
+          <button class="tab-btn" onclick="pTab('gift')"><span class="tab-icon gift"></span>礼物</button>
+          <button class="tab-btn" onclick="pTab('data')"><span class="tab-icon chart"></span>数据</button>
+        </div>
+      </div>
+      <!-- sessionid 弹窗 -->
+      <div class="modal-overlay" id="p-modal">
+        <div class="modal">
+          <h3>设置 SessionID</h3>
+          <input placeholder="粘贴 sessionid">
+          <div class="guide">
+            <b>获取方法：</b>用手机浏览器登录抖音直播，从 Cookie 中复制 sessionid 的值。<br>
+            路径：浏览器设置 - Cookie - live.douyin.com - sessionid
+          </div>
+          <div class="btn-row">
+            <button class="btn-cancel" onclick="closeSidModal('p')">取消</button>
+            <button class="btn-save" onclick="closeSidModal('p')">保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 横屏 ============ -->
+  <div class="col">
+    <div class="col-label">横屏 / 平板模式</div>
+    <div class="phone h">
+      <div class="statusbar">
+        <span>9:41</span>
+        <span class="right"><span class="bar-sig"><i></i><i></i><i></i><i></i></span><span class="wifi"><i></i><i></i><i></i></span><span class="batt"><i></i></span></span>
+      </div>
+      <div class="app">
+        <!-- 左面板 -->
+        <div class="left-panel">
+          <div class="left-top">
+            <div class="left-room">
+              <input placeholder="房间号" value="719059168053">
+              <button>连接</button>
+            </div>
+          </div>
+          <div class="left-sid">
+            <div class="sid-card">
+              <div class="sid-avatar">L</div>
+              <div class="sid-info"><div class="sid-name">辣条妹妹</div><div class="sid-fans">粉丝 42.1w</div></div>
+              <div class="sid-key" onclick="toggleSidModal('h')">
+                <span class="key-icon" style="width:14px;height:14px;border-width:2px"></span>
+                <span class="dot"></span>
+              </div>
+            </div>
+          </div>
+          <div class="left-info">
+            <div class="info-item"><span class="lbl">主播</span><span class="val">辣条妹妹</span></div>
+            <div class="info-item"><span class="lbl">在线观众</span><span class="val">2,657</span></div>
+            <div class="info-item"><span class="lbl">累计观看</span><span class="val">76,917</span></div>
+            <div class="info-item"><span class="lbl">本场点赞</span><span class="val">83,848</span></div>
+            <div class="info-item"><span class="lbl">粉丝数</span><span class="val">42.1w</span></div>
+            <div class="info-item"><span class="lbl">关注数</span><span class="val">128</span></div>
+            <div class="info-item"><span class="lbl">直播时长</span><span class="val">01:23:45</span></div>
+            <div class="info-item"><span class="lbl">最高在线</span><span class="val">3,012</span></div>
+          </div>
+        </div>
+        <!-- 中间弹幕 -->
+        <div class="center">
+          <div class="center-header">弹幕流 (10)</div>
+          <div class="msg-area">
+            <div class="msg-item"><div class="msg-avatar" style="background:linear-gradient(135deg,#ff9a56,#ff5252)">L</div><div class="msg-body"><div class="msg-user">辣条妹妹</div><div class="msg-text">欢迎大家来到直播间</div></div></div>
+            <div class="msg-item"><div class="msg-avatar" style="background:linear-gradient(135deg,#667eea,#764ba2)">A</div><div class="msg-body"><div class="msg-user">爱笑的眼睛</div><div class="msg-text">主播好漂亮啊</div></div></div>
+            <div class="msg-item"><div class="msg-avatar" style="background:linear-gradient(135deg,#f093fb,#f5576c)">X</div><div class="msg-body"><div class="msg-user">小幸运呀</div><div class="msg-text">这首歌叫什么名字</div></div></div>
+            <div class="msg-item"><div class="msg-avatar" style="background:linear-gradient(135deg,#4facfe,#00f2fe)">W</div><div class="msg-body"><div class="msg-user">温柔的风</div><div class="msg-text">来啦来啦 支持主播</div></div></div>
+            <div class="msg-item"><div class="msg-avatar" style="background:linear-gradient(135deg,#ffd166,#ff9a56)">T</div><div class="msg-body"><div class="msg-user">天天开心</div><div class="msg-text">送了一个 火箭</div></div></div>
+            <div class="msg-item"><div class="msg-avatar" style="background:linear-gradient(135deg,#a8edea,#fed6e3)">B</div><div class="msg-body"><div class="msg-user">笨笨熊</div><div class="msg-text">关注啦 期待下播</div></div></div>
+            <div class="msg-item"><div class="msg-avatar" style="background:linear-gradient(135deg,#d299c2,#9b6cae)">H</div><div class="msg-body"><div class="msg-user">花儿朵朵</div><div class="msg-text">主播声音好好听</div></div></div>
+            <div class="msg-item"><div class="msg-avatar" style="background:linear-gradient(135deg,#84fab0,#8fd3f4)">S</div><div class="msg-body"><div class="msg-user">盛夏的果实</div><div class="msg-text">能不能点一首晴天</div></div></div>
+            <div class="msg-item"><div class="msg-avatar" style="background:linear-gradient(135deg,#ffecd2,#fcb69f)">Y</div><div class="msg-body"><div class="msg-user">椰子鸡</div><div class="msg-text">主播好有趣哈哈哈</div></div></div>
+            <div class="msg-item"><div class="msg-avatar" style="background:linear-gradient(135deg,#c2e9fb,#a1c4fd)">M</div><div class="msg-body"><div class="msg-user">迷路的猫</div><div class="msg-text">第一次来 感觉不错</div></div></div>
+          </div>
+        </div>
+        <!-- 右面板 -->
+        <div class="right-panel">
+          <div class="right-tabs">
+            <button class="right-tab active" onclick="hTab('gift')">礼物信息</button>
+            <button class="right-tab" onclick="hTab('enter')">进入&关注</button>
+          </div>
+          <div class="right-content" id="h-gift">
+            <div class="gift-item"><div class="gift-avatar" style="background:linear-gradient(135deg,#ffd166,#ff9a56)">T</div><div class="gift-info"><div class="gift-user">天天开心</div><div class="gift-name">火箭</div></div><div class="gift-count">1</div></div>
+            <div class="gift-item"><div class="gift-avatar" style="background:linear-gradient(135deg,#ff9a56,#ff5252)">L</div><div class="gift-info"><div class="gift-user">辣条妹妹</div><div class="gift-name">玫瑰</div></div><div class="gift-count">99</div></div>
+            <div class="gift-item"><div class="gift-avatar" style="background:linear-gradient(135deg,#667eea,#764ba2)">A</div><div class="gift-info"><div class="gift-user">爱笑的眼睛</div><div class="gift-name">小心心</div></div><div class="gift-count">10</div></div>
+            <div class="gift-item"><div class="gift-avatar" style="background:linear-gradient(135deg,#f093fb,#f5576c)">X</div><div class="gift-info"><div class="gift-user">小幸运呀</div><div class="gift-name">蛋糕</div></div><div class="gift-count">3</div></div>
+            <div class="gift-item"><div class="gift-avatar" style="background:linear-gradient(135deg,#4facfe,#00f2fe)">W</div><div class="gift-info"><div class="gift-user">温柔的风</div><div class="gift-name">棒棒糖</div></div><div class="gift-count">5</div></div>
+            <div class="gift-item"><div class="gift-avatar" style="background:linear-gradient(135deg,#a8edea,#fed6e3)">B</div><div class="gift-info"><div class="gift-user">笨笨熊</div><div class="gift-name">皇冠</div></div><div class="gift-count">2</div></div>
+          </div>
+          <div class="right-content" id="h-enter" style="display:none">
+            <div class="enter-item"><div class="ea" style="background:linear-gradient(135deg,#84fab0,#8fd3f4)">S</div><span class="et">盛夏的果实 进入直播间</span></div>
+            <div class="enter-item"><div class="ea" style="background:linear-gradient(135deg,#ffecd2,#fcb69f)">Y</div><span class="et">椰子鸡 进入直播间</span></div>
+            <div class="enter-item"><div class="ea" style="background:linear-gradient(135deg,#c2e9fb,#a1c4fd)">M</div><span class="et">迷路的猫 进入直播间</span></div>
+            <div class="enter-item"><div class="ea" style="background:linear-gradient(135deg,#d299c2,#9b6cae)">H</div><span class="et follow">花儿朵朵 关注了主播</span></div>
+            <div class="enter-item"><div class="ea" style="background:linear-gradient(135deg,#a8edea,#fed6e3)">B</div><span class="et follow">笨笨熊 关注了主播</span></div>
+            <div class="enter-item"><div class="ea" style="background:linear-gradient(135deg,#ff9a56,#ff5252)">L</div><span class="et">辣条妹妹 加入粉丝团</span></div>
+          </div>
+        </div>
+      </div>
+      <!-- sessionid 弹窗 -->
+      <div class="modal-overlay" id="h-modal">
+        <div class="modal">
+          <h3>设置 SessionID</h3>
+          <input placeholder="粘贴 sessionid">
+          <div class="guide">
+            <b>获取方法：</b>用手机浏览器登录抖音直播，从 Cookie 中复制 sessionid 的值。<br>
+            路径：浏览器设置 - Cookie - live.douyin.com - sessionid
+          </div>
+          <div class="btn-row">
+            <button class="btn-cancel" onclick="closeSidModal('h')">取消</button>
+            <button class="btn-save" onclick="closeSidModal('h')">保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleSidModal(id){
+  document.getElementById(id+'-modal').classList.add('show');
+}
+function closeSidModal(id){
+  document.getElementById(id+'-modal').classList.remove('show');
+}
+// 竖屏 Tab
+function pTab(tab){
+  document.querySelectorAll('.p .tab-btn').forEach(function(b,i){
+    b.classList.toggle('active', i===(tab==='msg'?0:tab==='gift'?1:2));
+  });
+  var area=document.querySelector('.p .msg-area');
+  if(tab==='msg'){
+    area.style.display='flex';
+    area.className='msg-area';
+    area.innerHTML=orgPMsg;
+  }else if(tab==='gift'){
+    area.style.display='flex';
+    area.className='gift-list';
+    area.innerHTML='<div class="gift-item"><div class="gift-avatar" style="background:linear-gradient(135deg,#ffd166,#ff9a56)">T</div><div class="gift-info"><div class="gift-user">天天开心</div><div class="gift-name">火箭</div></div><div class="gift-count">1</div></div><div class="gift-item"><div class="gift-avatar" style="background:linear-gradient(135deg,#ff9a56,#ff5252)">L</div><div class="gift-info"><div class="gift-user">辣条妹妹</div><div class="gift-name">玫瑰</div></div><div class="gift-count">99</div></div><div class="gift-item"><div class="gift-avatar" style="background:linear-gradient(135deg,#667eea,#764ba2)">A</div><div class="gift-info"><div class="gift-user">爱笑的眼睛</div><div class="gift-name">小心心</div></div><div class="gift-count">10</div></div><div class="gift-item"><div class="gift-avatar" style="background:linear-gradient(135deg,#f093fb,#f5576c)">X</div><div class="gift-info"><div class="gift-user">小幸运呀</div><div class="gift-name">蛋糕</div></div><div class="gift-count">3</div></div><div class="gift-item"><div class="gift-avatar" style="background:linear-gradient(135deg,#4facfe,#00f2fe)">W</div><div class="gift-info"><div class="gift-user">温柔的风</div><div class="gift-name">棒棒糖</div></div><div class="gift-count">5</div></div>';
+  }else{
+    area.style.display='grid';
+    area.className='data-grid';
+    area.innerHTML='<div class="data-card blue"><div class="label">在线观众</div><div class="value">2,657</div></div><div class="data-card gold"><div class="label">累计观看</div><div class="value">76,917</div></div><div class="data-card pink"><div class="label">本场点赞</div><div class="value">83,848</div></div><div class="data-card green"><div class="label">最高在线</div><div class="value">3,012</div></div><div class="data-card blue"><div class="label">粉丝数</div><div class="value">42.1w</div></div><div class="data-card gold"><div class="label">关注数</div><div class="value">128</div></div><div class="data-card green"><div class="label">直播时长</div><div class="value">1:23</div></div><div class="data-card pink"><div class="label">礼物收入</div><div class="value">5,678</div></div>';
+  }
+}
+var orgPMsg=document.querySelector('.p .msg-area').innerHTML;
+// 横屏 Tab
+function hTab(tab){
+  document.querySelectorAll('.h .right-tab').forEach(function(b,i){
+    b.classList.toggle('active',i===(tab==='gift'?0:1));
+  });
+  document.getElementById('h-gift').style.display=tab==='gift'?'block':'none';
+  document.getElementById('h-enter').style.display=tab==='enter'?'block':'none';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+{
+  "name": "dycast-android",
+  "private": true,
+  "version": "1.3.9",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "node scripts/test-url-parse.mjs",
+    "test:rust": "cd src-tauri && cargo test",
+    "hot:manifest": "node scripts/make-hot-manifest.mjs",
+    "tauri": "tauri",
+    "android-dev": "node scripts/prepare-android-dev.mjs && tauri android dev --config src-tauri/tauri.android.conf.json",
+    "android-build": "tauri android build --config src-tauri/tauri.android.conf.json --apk --target aarch64"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-dialog": "^2.7.1",
+    "@tauri-apps/plugin-fs": "^2.5.1",
+    "@tauri-apps/plugin-os": "^2.3.2",
+    "@tauri-apps/plugin-shell": "^2.3.5",
+    "pako": "^2.1.0",
+    "protobufjs": "^7.4.0",
+    "sass": "^1.87.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4",
+    "@types/node": "^22.14.0",
+    "@types/pako": "^2.0.3",
+    "@vitejs/plugin-vue": "^5.2.3",
+    "@vue/tsconfig": "^0.7.0",
+    "typescript": "^5.8.0",
+    "vite": "^6.2.4",
+    "vue-tsc": "^2.2.8",
+    "ws": "^8.21.0"
+  }
+}

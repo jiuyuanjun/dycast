@@ -1,0 +1,3340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DyCast Android UI Preview</title>
+  <style>
+    :root {
+      --bg: #f7f6f5;
+      --bd: #b2bfc3;
+      --theme: #68be8d;
+      --tool: #8b968d;
+      --gold: #e6b422;
+      --title: #1e2732;
+      --text: #6b798e;
+      --tip: #9aa7b1;
+      --loading-bg: #eae5e3;
+      --error: #e94829;
+      --white: #ffffff;
+      --nav-active-bg: rgba(104, 190, 141, 0.12);
+      --link: #2d7dca;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1d21;
+        --bd: #3a3f47;
+        --theme: #68be8d;
+        --tool: #8b968d;
+        --gold: #e6b422;
+        --title: #e8eaed;
+        --text: #a8adb5;
+        --tip: #6d737c;
+        --loading-bg: #2c3036;
+        --error: #ff6b53;
+        --white: #24282e;
+        --nav-active-bg: rgba(104, 190, 141, 0.18);
+        --link: #6aa8ff;
+      }
+      body { background: #121418; }
+    }
+    html.force-dark :root,
+    html.force-dark {
+      --bg: #1a1d21;
+      --bd: #3a3f47;
+      --theme: #68be8d;
+      --tool: #8b968d;
+      --gold: #e6b422;
+      --title: #e8eaed;
+      --text: #a8adb5;
+      --tip: #6d737c;
+      --loading-bg: #2c3036;
+      --error: #ff6b53;
+      --white: #24282e;
+      --nav-active-bg: rgba(104, 190, 141, 0.18);
+      --link: #6aa8ff;
+    }
+    html.force-dark body { background: #121418; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 22px 14px 44px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #eef1f3;
+      color: var(--title);
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 5px;
+      font-size: 18px;
+    }
+    .version-badge {
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 6px;
+      padding: 2px 7px;
+      border-radius: 10px;
+      background: var(--theme);
+      color: #fff;
+      font-size: 10px;
+      font-weight: bold;
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      z-index: 100;
+      padding: 6px 11px;
+      border: 1px solid var(--bd);
+      border-radius: 16px;
+      background: var(--white);
+      color: var(--title);
+      font-size: 10px;
+      cursor: pointer;
+      box-shadow: 0 2px 7px rgba(0,0,0,0.1);
+    }
+    .subtitle {
+      text-align: center;
+      color: var(--text);
+      margin-bottom: 20px;
+      font-size: 11px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 16px;
+      justify-items: center;
+      max-width: 1500px;
+      margin: 0 auto;
+    }
+    /* 横屏平展图：一行两个（宽度不足自动降为一行一个） */
+    .grid-ls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(745px, 1fr));
+      gap: 16px;
+      justify-items: center;
+      align-items: start;
+      max-width: 1560px;
+      margin: 24px auto 0;
+    }
+    .grid-ls .preview-card.wide { grid-column: auto; }
+    .grid-ls #known-issues { grid-column: 1 / -1; justify-self: stretch; }
+    .preview-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+    .device {
+      width: 230px;
+      height: 480px;
+      background: var(--bg);
+      border: 7px solid #2a2a2a;
+      border-radius: 26px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.17);
+      display: flex;
+      flex-direction: column;
+    }
+    .device.landscape {
+      width: 720px;
+      height: 440px;
+    }
+    .device.tablet {
+      width: 520px;
+      height: 380px;
+    }
+    .preview-card.wide {
+      grid-column: 1 / -1;
+    }
+    .notch {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 94px;
+      height: 20px;
+      background: #2a2a2a;
+      border-bottom-left-radius: 8px;
+      border-bottom-right-radius: 8px;
+      z-index: 10;
+    }
+    .screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding-top: 32px;
+      position: relative;
+    }
+    .device.landscape .screen,
+    .device.tablet .screen {
+      padding-top: 16px;
+      padding-left: env(safe-area-inset-left, 10px);
+      padding-right: env(safe-area-inset-right, 10px);
+    }
+    .header {
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--white);
+      border-bottom: 1px solid var(--bd);
+      font-weight: bold;
+      font-size: 12px;
+      color: var(--title);
+      flex-shrink: 0;
+      position: relative;
+    }
+    .header .app-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      margin-right: 5px;
+    }
+    .header .back,
+    .header .settings,
+    .header .close {
+      position: absolute;
+      color: var(--tool);
+      font-size: 15px;
+      font-family: "castfont";
+      font-style: normal;
+      -webkit-font-smoothing: antialiased;
+    }
+    .header .back { left: 8px; }
+    .header .back:before { content: "\e77d"; }
+    .header .settings { right: 8px; }
+    .header .settings:before { content: "\e771"; }
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .label {
+      font-size: 11px;
+      color: var(--text);
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    .input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      background: var(--white);
+      font-size: 11px;
+      outline: none;
+      margin-bottom: 8px;
+      color: var(--title);
+    }
+    .input::placeholder { color: var(--tip); }
+    .btn {
+      width: 100%;
+      padding: 8px;
+      border: none;
+      border-radius: 6px;
+      background: var(--theme);
+      color: var(--white);
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 6px;
+    }
+    .btn.secondary {
+      background: var(--white);
+      color: var(--text);
+      border: 1px solid var(--bd);
+    }
+    .btn.danger {
+      background: var(--error);
+      color: #fff;
+    }
+    .btn.small {
+      padding: 5px 8px;
+      font-size: 10px;
+      margin-bottom: 0;
+    }
+    .btn-row {
+      display: flex;
+      gap: 6px;
+    }
+    .btn-row .btn { flex: 1; margin-bottom: 0; }
+
+    /* Page 1 */
+    .room-form {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      gap: 10px;
+    }
+    .room-form-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 8px;
+      margin-bottom: 6px;
+    }
+    .room-form-title {
+      font-size: 17px;
+      font-weight: bold;
+      margin: 0;
+      color: var(--title);
+    }
+    .room-form-subtitle {
+      font-size: 10px;
+      color: var(--text);
+      margin: 0;
+    }
+    .room-form-input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      background: var(--white);
+      font-size: 11px;
+      outline: none;
+      color: var(--title);
+    }
+    .room-form-input::placeholder { color: var(--tip); }
+    .room-form-example {
+      width: 100%;
+      font-size: 9px;
+      color: var(--tip);
+      line-height: 1.5;
+      margin: 0;
+      padding: 0 2px;
+    }
+    .room-form-example span { text-decoration: underline; }
+
+    /* Page 2 */
+    .cover-box {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: var(--loading-bg);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--tip);
+      font-size: 11px;
+      margin-bottom: 6px;
+      overflow: hidden;
+    }
+    .cover-box img { width: 100%; height: 100%; object-fit: cover; }
+    .cover-title {
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 8px;
+      color: var(--title);
+      font-size: 12px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(178, 191, 195, 0.4);
+      font-size: 11px;
+    }
+    .info-row .k { font-weight: bold; color: var(--title); }
+    .info-row .v { color: var(--text); }
+    .confirm-actions {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      color: var(--theme);
+      font-weight: bold;
+      font-size: 11px;
+    }
+    .live-badge::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--theme);
+    }
+
+    /* Page 3 */
+    .key-icon {
+      width: 46px;
+      height: 46px;
+      margin: 16px auto 10px;
+      background: var(--white);
+      border: 2px solid var(--theme);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: var(--theme);
+    }
+    .tip-text {
+      text-align: center;
+      color: var(--text);
+      font-size: 11px;
+      line-height: 1.5;
+      margin-bottom: 14px;
+    }
+    .skip-row {
+      text-align: center;
+      margin-top: auto;
+      padding-top: 10px;
+    }
+    .skip-link {
+      color: var(--tip);
+      font-size: 10px;
+      text-decoration: underline;
+    }
+
+    /* Page 4 bottom nav */
+    .bottom-nav {
+      height: 46px;
+      background: var(--white);
+      border-top: 1px solid var(--bd);
+      display: flex;
+      flex-shrink: 0;
+    }
+    .nav-item {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      font-size: 8px;
+      color: var(--tool);
+      cursor: pointer;
+      white-space: nowrap;
+      padding: 0 1px;
+    }
+    .nav-item.active {
+      color: var(--theme);
+      background: var(--nav-active-bg);
+    }
+    .nav-icon {
+      width: 17px;
+      height: 17px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: var(--tool);
+      opacity: 0.85;
+      font-family: "castfont";
+      font-style: normal;
+      -webkit-font-smoothing: antialiased;
+    }
+    .nav-item.active .nav-icon { color: var(--theme); opacity: 1; }
+
+    /* Cast list */
+    .cast-list {
+      flex: 1;
+      background: var(--white);
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      padding: 6px;
+      overflow-y: auto;
+    }
+    .cast-item {
+      padding: 3px 0;
+      font-size: 10px;
+      border-bottom: 1px solid rgba(178,191,195,0.25);
+      line-height: 1.4;
+    }
+    .cast-item:last-child { border-bottom: none; }
+    .cast-item .user { color: var(--theme); font-weight: bold; }
+    .cast-item .msg { color: var(--title); }
+    .cast-item .gift-icon { width: 14px; height: 14px; vertical-align: middle; margin: 0 2px; object-fit: contain; }
+    .cast-item .gift-amount { color: var(--gold); font-weight: bold; vertical-align: middle; font-size: 11px; }
+    .cast-item .gift-text { color: #eba825; }
+    .cast-item .level { color: var(--tip); font-size: 9px; margin-right: 3px; }
+    .cast-item .social-tag { color: var(--link); font-size: 9px; }
+    .cast-empty {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--tip);
+      font-size: 10px;
+    }
+    .session-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px;
+      margin-bottom: 6px;
+      border-radius: 8px;
+      background: var(--white);
+      border: 1px solid var(--bd);
+    }
+    .session-bar .session-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--loading-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: var(--theme);
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .session-bar .session-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .session-bar .session-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .session-bar .session-title {
+      font-size: 11px;
+      font-weight: bold;
+      color: var(--title);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .session-bar .session-value {
+      font-size: 9px;
+      color: var(--text);
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .session-bar .session-action {
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      background: var(--bg);
+      border: 1px solid var(--bd);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--tool);
+      flex-shrink: 0;
+    }
+
+    /* Castfont icons */
+    @font-face {
+      font-family: "castfont";
+      src: url('/preview-assets/castfont.ttf') format('truetype');
+    }
+    .ice { font-family: "castfont"; font-style: normal; -webkit-font-smoothing: antialiased; }
+    .ice-cast:before { content: "\e601"; }
+    .ice-data:before { content: "\e6da"; }
+    .ice-keya:before { content: "\e6b4"; }
+    .ice-save:before { content: "\e636"; }
+    .ice-stat:before { content: "\e620"; }
+    .ice-arrow-left-copy:before { content: "\e77d"; }
+    .ice-arrow-right-copy:before { content: "\e77e"; }
+    .ice-close:before { content: "\e69a"; }
+    .ice-setting:before { content: "\e771"; }
+    .ice-config:before { content: "\e618"; }
+    .ice-room-id:before { content: "\e622"; }
+    .ice-douyin:before { content: "\e667"; }
+    .ice-member:before { content: "\e657"; }
+    .ice-gift:before { content: "\e651"; }
+    .ice-msg:before { content: "\e61f"; }
+
+    /* Session overlay */
+    .session-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(247,246,245,0.92);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--tip);
+      font-size: 10px;
+      text-align: center;
+      padding: 16px;
+      gap: 6px;
+      border-radius: 6px;
+    }
+    @media (prefers-color-scheme: dark) {
+      .session-overlay { background: rgba(26,29,33,0.92); color: var(--text); }
+    }
+    html.force-dark .session-overlay { background: rgba(26,29,33,0.92); color: var(--text); }
+    .panel-login-tip {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: var(--tip);
+      font-size: 9px;
+      text-align: center;
+      padding: 8px;
+    }
+    .panel-login-tip .key-icon {
+      width: 28px;
+      height: 28px;
+      margin: 0;
+      font-size: 12px;
+    }
+    .panel-login-tip .tip-text {
+      font-size: 9px;
+      margin: 0;
+    }
+    .panel-login-tip .btn {
+      width: auto;
+      min-width: 100px;
+      padding: 5px 10px;
+      font-size: 9px;
+      margin-bottom: 0;
+    }
+
+    /* Simulator section */
+    .simulator-section {
+      width: 100%;
+      grid-column: 1 / -1;
+      background: var(--white);
+      border: 1px solid var(--bd);
+      border-radius: 8px;
+      padding: 14px;
+    }
+    .simulator-section h3 {
+      margin: 0 0 12px;
+      font-size: 14px;
+      color: var(--title);
+    }
+    .simulator-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+    }
+    .simulator-device {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .simulator-device.portrait .device {
+      width: 320px;
+      height: 640px;
+      border-radius: 28px;
+      padding: 10px;
+    }
+    .simulator-device.portrait .screen { padding-top: 32px; }
+    .simulator-device.landscape .device {
+      width: 680px;
+      height: 360px;
+      border-radius: 20px;
+      padding: 10px;
+    }
+    .simulator-device.landscape .screen { padding-top: 16px; padding-left: 16px; padding-right: 16px; }
+    .simulator-label {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text);
+    }
+
+
+    /* Landscape Windows layout */
+    .win-layout {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      gap: 4px;
+      padding: 3px;
+      background: var(--bg);
+    }
+    .win-left {
+      width: 170px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      gap: 3px;
+    }
+    .win-center {
+      flex: 1.4;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+    }
+    .win-right {
+      width: 195px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      overflow-y: auto;
+    }
+    .win-panel {
+      background: var(--white);
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      font-size: 8px;
+    }
+    .win-panel-header {
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 1px solid var(--bd);
+      background: var(--white);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .win-panel-dots {
+      position: absolute;
+      left: 5px;
+      display: flex;
+      gap: 3px;
+    }
+    .win-panel-dots span {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+    }
+    .win-panel-dots span:nth-child(1) { background: #ff5f57; }
+    .win-panel-dots span:nth-child(2) { background: #febc2e; }
+    .win-panel-dots span:nth-child(3) { background: #28c840; }
+    .win-panel-title {
+      font-size: 9px;
+      font-weight: bold;
+      color: var(--title);
+    }
+    .win-panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 3px;
+      min-height: 0;
+    }
+    .win-panel.force-light {
+      background: #ffffff;
+      border-color: #b2bfc3;
+      color: #1e2732;
+    }
+    .win-panel.force-light .win-panel-header {
+      background: #ffffff;
+      border-color: #b2bfc3;
+      color: #1e2732;
+    }
+    .win-panel.force-light .cast-empty { color: #9aa7b1; }
+    .win-panel.force-light .win-panel-title { color: #1e2732; }
+    .win-panel.force-light .input {
+      background: #ffffff;
+      border-color: #b2bfc3;
+      color: #1e2732;
+    }
+    .win-panel.force-light .btn {
+      background: #68be8d;
+      color: #ffffff;
+    }
+    @media (prefers-color-scheme: dark) {
+      .win-panel.force-light {
+        background: #ffffff;
+        border-color: #b2bfc3;
+        color: #1e2732;
+      }
+      .win-panel.force-light .win-panel-header {
+        background: #ffffff;
+        border-color: #b2bfc3;
+        color: #1e2732;
+      }
+      .win-panel.force-light .cast-empty { color: #9aa7b1; }
+      .win-panel.force-light .win-panel-title { color: #1e2732; }
+      .win-panel.force-light .input {
+        background: #ffffff;
+        border-color: #b2bfc3;
+        color: #1e2732;
+      }
+      .win-panel.force-light .btn {
+        background: #68be8d;
+        color: #ffffff;
+      }
+    }
+    html.force-dark .win-panel.force-light {
+      background: #ffffff;
+      border-color: #b2bfc3;
+      color: #1e2732;
+    }
+    html.force-dark .win-panel.force-light .win-panel-header {
+      background: #ffffff;
+      border-color: #b2bfc3;
+      color: #1e2732;
+    }
+    html.force-dark .win-panel.force-light .cast-empty { color: #9aa7b1; }
+    html.force-dark .win-panel.force-light .win-panel-title { color: #1e2732; }
+    html.force-dark .win-panel.force-light .input {
+      background: #ffffff;
+      border-color: #b2bfc3;
+      color: #1e2732;
+    }
+    html.force-dark .win-panel.force-light .btn {
+      background: #68be8d;
+      color: #ffffff;
+    }
+    .small-info {
+      font-size: 8px;
+      padding: 2px 0;
+      display: flex;
+      justify-content: space-between;
+    }
+    .win-input-row {
+      display: flex;
+      gap: 3px;
+      align-items: center;
+      margin-bottom: 3px;
+    }
+    .win-input-row .input {
+      flex: 1;
+      margin-bottom: 0;
+      padding: 3px 5px;
+      font-size: 8px;
+    }
+    .win-input-row .btn {
+      width: auto;
+      padding: 3px 7px;
+      font-size: 8px;
+      margin-bottom: 0;
+      white-space: nowrap;
+    }
+    .win-tools {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      padding: 2px 0;
+      margin-top: auto;
+    }
+    .win-tool {
+      min-width: 38px;
+      height: 22px;
+      border-radius: 4px;
+      background: var(--white);
+      border: 1px solid var(--bd);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--tool);
+      font-size: 9px;
+      cursor: pointer;
+      padding: 0 5px;
+      white-space: nowrap;
+    }
+    .win-timer {
+      text-align: center;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      font-weight: bold;
+      color: #9079ad;
+      padding: 2px 0;
+    }
+    .win-status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      font-size: 9px;
+      color: var(--text);
+      padding: 2px 0;
+    }
+    .win-status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--theme);
+      border: 1px solid #455765;
+    }
+    .win-status-dot.offline { background: #f08300; }
+    .win-status-dot.fail { background: #e60033; }
+
+    /* Landscape user card (Windows style) */
+    .win-user-card {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px;
+      background: var(--white);
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      margin-top: auto;
+    }
+    .win-user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--loading-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .win-user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .win-user-info { flex: 1; min-width: 0; }
+    .win-user-name {
+      font-size: 9px;
+      font-weight: bold;
+      color: var(--title);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .win-user-fs {
+      font-size: 8px;
+      color: var(--text);
+      margin-top: 1px;
+    }
+    .win-user-action {
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      background: var(--bg);
+      border: 1px solid var(--bd);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--tool);
+      flex-shrink: 0;
+    }
+    .win-user-action svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+    .win-icon-tools {
+      display: flex;
+      justify-content: flex-end;
+      gap: 5px;
+      padding: 2px 0;
+    }
+    .win-icon-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      background: var(--white);
+      border: 1px solid var(--bd);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--tool);
+      font-size: 12px;
+      font-family: "castfont";
+      font-style: normal;
+      cursor: pointer;
+    }
+
+    .caption {
+      text-align: center;
+      margin-top: 7px;
+      color: var(--text);
+      font-size: 10px;
+      line-height: 1.4;
+    }
+
+    /* More page */
+    .more-page {
+      position: absolute;
+      inset: 0;
+      padding-top: 20px;
+      background: var(--bg);
+      z-index: 35;
+      display: flex;
+      flex-direction: column;
+    }
+    .more-page-header {
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--white);
+      border-bottom: 1px solid var(--bd);
+      font-size: 12px;
+      font-weight: bold;
+      color: var(--title);
+      position: relative;
+    }
+    .more-page-back {
+      position: absolute;
+      left: 8px;
+      font-size: 15px;
+      color: var(--tool);
+      font-family: "castfont";
+      font-style: normal;
+    }
+    .more-page-back:before { content: "\e77d"; }
+    .more-page-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .more-group {
+      background: var(--white);
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .more-group-title {
+      padding: 6px 8px;
+      font-size: 10px;
+      color: var(--tip);
+      border-bottom: 1px solid var(--bd);
+    }
+    .more-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 8px;
+      font-size: 11px;
+      color: var(--title);
+      border-bottom: 1px solid rgba(178,191,195,0.3);
+      cursor: pointer;
+    }
+    .more-item:last-child { border-bottom: none; }
+    .more-item .icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      background: var(--bg);
+      border: 1px solid var(--bd);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--theme);
+      font-family: "castfont";
+      font-style: normal;
+    }
+    .more-item .arrow {
+      margin-left: auto;
+      color: var(--tip);
+      font-family: "castfont";
+      font-style: normal;
+    }
+    .more-item .arrow:before { content: "\e77e"; }
+
+    .console-log {
+      margin-bottom: 5px;
+      padding: 3px 5px;
+      border-radius: 3px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 9px;
+      line-height: 1.4;
+    }
+    .console-log.info { border-left: 3px solid var(--theme); }
+    .console-log.success { border-left: 3px solid var(--theme); color: var(--theme); }
+    .console-log.error { border-left: 3px solid var(--error); color: var(--error); }
+    .console-log .time { color: var(--tip); margin-right: 3px; }
+    .console-log .tag { font-weight: bold; margin-right: 3px; }
+
+    /* Notification settings page */
+    .notify-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .notify-group {
+      background: var(--white);
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      padding: 0 9px;
+    }
+    .notify-group-title {
+      font-size: 10px;
+      color: var(--text);
+      padding: 6px 0 3px;
+      border-bottom: 1px solid var(--bd);
+    }
+    .notify-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 34px;
+      padding: 7px 0;
+      font-size: 11px;
+      color: var(--title);
+      border-bottom: 1px solid var(--bd);
+    }
+    .notify-row:last-child { border-bottom: none; }
+    .notify-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      background: var(--bg);
+      border: 1px solid var(--bd);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--theme);
+      font-family: "castfont";
+      font-style: normal;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+    .notify-row span:nth-child(2) { flex: 1; }
+    .switch {
+      width: 40px;
+      height: 22px;
+      border-radius: 11px;
+      background: var(--text);
+      position: relative;
+      transition: background 0.2s ease;
+      flex-shrink: 0;
+    }
+    .switch.on { background: var(--theme); }
+    .switch-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      transition: transform 0.2s ease;
+    }
+    .switch.on .switch-thumb { transform: translateX(18px); }
+    .notify-number {
+      width: 48px;
+      height: 24px;
+      border: 1px solid var(--bd);
+      border-radius: 4px;
+      text-align: center;
+      background: var(--bg);
+      color: var(--title);
+      font-size: 11px;
+    }
+    .notify-hint {
+      font-size: 9px;
+      color: var(--text);
+      padding: 4px 0 8px;
+    }
+    .notify-arrow {
+      width: 7px;
+      height: 7px;
+      border-top: 2px solid var(--text);
+      border-right: 2px solid var(--text);
+      transform: rotate(45deg);
+      flex-shrink: 0;
+    }
+
+    /* Modal card reused as content card */
+    .modal-card {
+      width: 100%;
+      max-width: 260px;
+      background: var(--white);
+      border-radius: 8px;
+      padding: 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .modal-title {
+      font-size: 13px;
+      font-weight: bold;
+      color: var(--title);
+      text-align: center;
+    }
+    .modal-card .input { margin-bottom: 0; }
+    .modal-desc {
+      font-size: 9px;
+      color: var(--tip);
+      line-height: 1.4;
+    }
+
+    /* Data page */
+    .data-cover {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: var(--loading-bg);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--tip);
+      font-size: 11px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .data-cover img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* Login webview page */
+    .webview-box {
+      flex: 1;
+      background: var(--loading-bg);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--tip);
+      font-size: 11px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .webview-toolbar {
+      display: flex;
+      gap: 6px;
+    }
+
+    /* ===== 双视图联动模拟器（顶部，样式以 #simulator 为命名空间） ===== */
+    #simulator { margin-bottom: 4px; }
+    #simulator .simulator-scroll { overflow-x: auto; padding: 2px 0 8px; }
+    #simulator .simulator-grid {
+      display: flex;
+      gap: 20px;
+      width: max-content;
+      margin: 0 auto;
+      align-items: flex-end;
+    }
+    #simulator .simulator-device.landscape .screen { padding: 0; }
+    #simulator .win-panel.panel-active {
+      border-color: var(--theme);
+      box-shadow: 0 0 0 1px var(--theme) inset;
+    }
+    .sim-hint {
+      font-size: 10px;
+      color: var(--tip);
+      text-align: center;
+      margin: 2px 0 0;
+      line-height: 1.7;
+    }
+    /* 直播页头部信息条（与真机一致：在线观众 | 粉丝） */
+    .sim-info-strip {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 0 0 8px;
+      padding: 5px 8px;
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      background: var(--white);
+      font-size: 10px;
+      color: var(--text);
+      flex-shrink: 0;
+    }
+    .sim-info-strip b { color: var(--title); font-weight: 600; }
+    /* 进入&关注 筛选 chips（与真机一致：全部/进入/关注/粉丝团） */
+    .sim-chips {
+      display: flex;
+      gap: 6px;
+      padding: 0 0 8px;
+      flex-shrink: 0;
+    }
+    .sim-chip {
+      flex: 1;
+      padding: 5px 0;
+      border: 1px solid var(--bd);
+      border-radius: 16px;
+      background: var(--white);
+      color: var(--text);
+      font-size: 10px;
+      text-align: center;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .sim-chip.active {
+      background: var(--theme);
+      border-color: var(--theme);
+      color: #fff;
+      font-weight: bold;
+    }
+    /* 首页最近进入（与 App HomePage 一致） */
+    .recent-section { width: 100%; margin-top: auto; padding-top: 14px; }
+    .recent-title {
+      font-size: 10px;
+      color: var(--tip);
+      margin: 0 0 6px;
+      text-align: center;
+    }
+    .recent-table {
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--white);
+    }
+    .recent-row { display: flex; align-items: stretch; }
+    .recent-row + .recent-row { border-top: 1px solid var(--bd); }
+    .recent-cell {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 4px;
+      cursor: pointer;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .recent-cell + .recent-cell { border-left: 1px solid var(--bd); }
+    .recent-name { font-size: 11px; font-weight: bold; color: var(--title); }
+    .recent-id { font-size: 9px; color: var(--tip); }
+    /* 最近进入：横屏底部药丸钮 */
+    .recent-pills { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+    .recent-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      border: 1px solid var(--bd);
+      border-radius: 14px;
+      background: var(--white);
+      color: var(--title);
+      font-size: 10px;
+      cursor: pointer;
+    }
+    .recent-pill .rp-id { color: var(--tip); }
+    /* 输入框文字居中 */
+    .room-link-input, .room-form-input { text-align: center; }
+    /* 横屏进入&关注&粉丝团分栏 */
+    .ls-social-columns { flex: 1; display: flex; gap: 4px; min-height: 0; padding: 4px; }
+    .ls-social-col { flex: 1; min-width: 0; display: flex; flex-direction: column; border: 1px solid var(--bd); border-radius: 4px; overflow: hidden; }
+    .ls-social-label { flex-shrink: 0; text-align: center; font-size: 8px; color: var(--title); background: var(--panel-bg, var(--white)); padding: 2px 0; border-bottom: 1px solid var(--bd); }
+    .ls-social-list { flex: 1; overflow-y: auto; font-size: 8px; }
+    /* 横屏首页：表单始终居中，最近进入药丸固定底部 */
+    .ls-home-center { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; overflow-y: auto; }
+    .ls-home-form { width: 280px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .ls-home-recent { flex-shrink: 0; padding: 6px 20px 14px; }
+    .ls-home-recent .recent-section { padding-top: 0; margin-top: 0; }
+    /* 横屏双栏布局（首页/确认主播等全屏页） */
+    .ls-two-col {
+      flex: 1;
+      display: flex;
+      gap: 16px;
+      padding: 12px 16px;
+      overflow-y: auto;
+      min-height: 0;
+      align-items: center;
+      justify-content: center;
+    }
+    /* 横屏设置：一级/二级菜单（master-detail） */
+    .ls-settings-body { flex: 1; display: flex; min-height: 0; }
+    .ls-settings-nav {
+      width: 150px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--bd);
+      background: var(--white);
+      overflow-y: auto;
+    }
+    .ls-settings-nav-item {
+      padding: 11px 12px;
+      font-size: 11px;
+      color: var(--title);
+      cursor: pointer;
+      border-bottom: 1px solid rgba(178, 191, 195, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .ls-settings-nav-item.active {
+      color: var(--theme);
+      background: var(--nav-active-bg);
+      font-weight: bold;
+    }
+    .ls-settings-detail { flex: 1; overflow-y: auto; padding: 10px; }
+    /* 横屏登录/网页登录全屏页（与真机 LandscapeLoginPage 一致，登录流程结束后才显示三栏主界面） */
+    .ls-fullpage {
+      position: absolute;
+      inset: 0;
+      z-index: 35;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .ls-full-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-y: auto;
+      padding: 10px;
+      min-height: 0;
+    }
+  </style>
+  <script src="/mssdk.js"></script>
+  <script src="/preview-runtime.js"></script>
+</head>
+<body>
+  <button class="theme-toggle" onclick="toggleTheme()">切换深色模式</button>
+  <h1>DyCast Android UI Preview <span class="version-badge">v1.1.1</span></h1>
+  <p class="subtitle">完整页面与功能预览 · 顶部双视图联动模拟器（竖屏 / 横屏实时同步）· 下方为界面效果平展图 · 自动跟随系统深色模式</p>
+
+  <!-- ==================== 顶部：双视图实时联动模拟器 ==================== -->
+  <div class="simulator-section" id="simulator">
+    <h3>双视图联动模拟器 · 点击任意一侧操作，另一侧实时同步</h3>
+    <div class="simulator-scroll">
+      <div class="simulator-grid">
+        <!-- Portrait simulator -->
+        <div class="simulator-device portrait">
+          <div class="device">
+            <div class="notch"></div>
+            <div class="screen" id="sim-portrait-screen"></div>
+          </div>
+          <div class="simulator-label">竖屏 · 手机版式（可操作）</div>
+        </div>
+        <!-- Landscape simulator -->
+        <div class="simulator-device landscape">
+          <div class="device">
+            <div class="screen" id="sim-landscape-screen"></div>
+          </div>
+          <div class="simulator-label">横屏 · 电脑版式三栏（联动）</div>
+        </div>
+      </div>
+    </div>
+    <p class="sim-hint">
+      双端页面流程一致：连接直播间 → 确认主播 → 登录抖音账号（可跳过）→ 直播间；首页点击「搜索主播」可打开抖音搜索 WebView。<br>
+      横屏与竖屏同构：登录流程期间为全屏页面，登录完成后才显示三栏主界面；横屏登录页下方有「设置」入口，设置页为一级 / 二级菜单（点击左侧一级，右侧显示对应二级内容）。
+    </p>
+  </div>
+
+  <!-- 真实连接日志：顶部双视图下方，数据来自真实 HTTP / WebSocket 连接 -->
+  <section id="real-connection-logs" class="simulator-section" style="margin-top:14px;">
+    <h3>真实连接日志</h3>
+    <div id="real-connection-log-list" style="max-height:180px;overflow-y:auto;background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:8px;font-family:Menlo,Consolas,monospace;font-size:10px;">
+      <div class="cast-empty">等待真实连接……</div>
+    </div>
+  </section>
+
+  <div class="grid">
+    <!-- Page 1: Room Input -->
+    <div class="preview-card">
+      <div class="device">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="header">
+            <span>抖音直播弹幕助手</span>
+          </div>
+          <div class="content">
+            <div class="room-form">
+              <img class="room-form-icon" src="/preview-assets/app-icon.png" alt="应用图标" />
+              <h2 class="room-form-title">连接直播间</h2>
+              <p class="room-form-subtitle">输入房间号和直播链接开始使用<br>或者直接输入主播名称，可以直接进行搜索</p>
+              <input class="room-form-input" placeholder="房间号 / 直播链接 / 主播名称" />
+              <button class="btn">下一步</button>
+              <button class="btn secondary" style="margin-bottom:0;">搜索主播</button>
+            </div>
+            <div class="recent-section">
+              <p class="recent-title">最近进入</p>
+              <div class="recent-table">
+                <div class="recent-row">
+                  <span class="recent-cell recent-name">陈伯(全能王)</span>
+                  <span class="recent-cell recent-name">涛涛📷</span>
+                </div>
+                <div class="recent-row">
+                  <span class="recent-cell recent-id">921169302662</span>
+                  <span class="recent-cell recent-id">397624714394</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">Page 1 · 连接直播间</div>
+    </div>
+
+    <!-- Page 2: Confirm (live) -->
+    <div class="preview-card">
+      <div class="device">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="header">
+            <span class="back"></span>
+            <span>确认主播</span>
+          </div>
+          <div class="content" style="padding-top:2px;">
+            <div class="cover-box"><img src="https://picsum.photos/seed/dycastcover/400/225" alt="cover" onerror="this.style.display='none';this.parentNode.appendChild(document.createTextNode('暂无封面'))" /></div>
+            <div class="cover-title">陈伯大舞台有梦你就来！</div>
+            <div class="info-row"><span class="k">主播</span><span class="v">陈伯(全能王)</span></div>
+            <div class="info-row"><span class="k">直播状态</span><span class="v"><span class="live-badge">直播中</span></span></div>
+            <div class="info-row"><span class="k">主播粉丝数</span><span class="v">24038415</span></div>
+            <div class="info-row"><span class="k">在线观众数</span><span class="v">542787</span></div>
+            <div class="info-row"><span class="k">累计观看人数</span><span class="v">11421619</span></div>
+            <div class="info-row"><span class="k">本场点赞数</span><span class="v">64349761</span></div>
+            <div class="confirm-actions">
+              <button class="btn">确认正确，进入下一步</button>
+              <button class="btn secondary">返回修改</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">Page 2 · 确认主播（直播中显示确认按钮）</div>
+    </div>
+
+    <!-- Page 2: Confirm (not live) -->
+    <div class="preview-card">
+      <div class="device">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="header">
+            <span class="back"></span>
+            <span>确认主播</span>
+          </div>
+          <div class="content" style="padding-top:2px;">
+            <div class="cover-box"><img src="https://picsum.photos/seed/dycastcover/400/225" alt="cover" onerror="this.style.display='none';this.parentNode.appendChild(document.createTextNode('暂无封面'))" /></div>
+            <div class="cover-title">陈伯大舞台有梦你就来！</div>
+            <div class="info-row"><span class="k">主播</span><span class="v">陈伯(全能王)</span></div>
+            <div class="info-row"><span class="k">直播状态</span><span class="v" style="color:var(--error);font-weight:bold;">未开播</span></div>
+            <div class="info-row"><span class="k">主播粉丝数</span><span class="v">24038415</span></div>
+            <div class="info-row"><span class="k">在线观众数</span><span class="v">-</span></div>
+            <div class="info-row"><span class="k">累计观看人数</span><span class="v">-</span></div>
+            <div class="info-row"><span class="k">本场点赞数</span><span class="v">-</span></div>
+            <div class="confirm-actions">
+              <button class="btn secondary">返回修改</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">Page 2 · 确认主播（未开播隐藏确认按钮）</div>
+    </div>
+
+    <!-- Page 3: Session Login -->
+    <div class="preview-card" id="page3">
+      <div class="device">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="header">
+            <span class="back"></span>
+            <span>登录抖音账号</span>
+          </div>
+          <div class="content" style="justify-content:center;">
+            <div style="display:flex;flex-direction:column;align-items:center;width:100%;">
+              <div class="key-icon"><i class="ice-keya ice"></i></div>
+              <p class="tip-text">登录抖音账号后才可显示礼物信息</p>
+            </div>
+            <div style="width:100%;margin-top:18px;">
+              <button class="btn" style="margin-bottom:0;" onclick="document.getElementById('page3b').scrollIntoView({behavior:'smooth'})">抖音扫码 / 网页登录</button>
+              <div class="skip-row"><span class="skip-link">跳过，稍后登录</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">Page 3 · 登录抖音账号</div>
+    </div>
+
+    <!-- Page 3b: Webview Login -->
+    <div class="preview-card" id="page3b">
+      <div class="device">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="header">
+            <span class="back"></span>
+            <span>抖音网页登录</span>
+          </div>
+          <div class="content">
+            <div class="webview-box">抖音登录 WebView<br>自动提取 sessionid 并跳转</div>
+            <div class="webview-toolbar">
+              <button class="btn secondary small" style="flex:1;">关闭</button>
+              <button class="btn small" style="flex:1;">已完成登录</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">Page 3b · 抖音网页登录 WebView</div>
+    </div>
+
+    <!-- Page 4: Live Room Portrait - Cast -->
+    <div class="preview-card">
+      <div class="device">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="header"><span>直播间 560402456867</span><span class="settings" title="更多设置"></span></div>
+          <div class="content" style="padding-bottom:0;">
+            <div class="sim-info-strip"><span>在线观众 <b>556863</b></span><span style="color:var(--tip);">|</span><span>粉丝 <b>24039502</b></span></div>
+            <div class="cast-list">
+              <div class="cast-item"><span class="user">用户A：</span><span class="msg">主播晚上好</span></div>
+              <div class="cast-item"><span class="user">用户B：</span><span class="msg">666666</span></div>
+              <div class="cast-item"><span class="user">用户C：</span><span class="msg">求连麦</span></div>
+              <div class="cast-item"><span class="user">用户D：</span><span class="msg">这个好听</span></div>
+              <div class="cast-item"><span class="user">用户E：</span><span class="msg">来了来了</span></div>
+            </div>
+          </div>
+          <div class="bottom-nav">
+            <div class="nav-item active">
+              <div class="nav-icon ice-cast ice"></div>
+              <span>弹幕</span>
+            </div>
+            <div class="nav-item">
+              <div class="nav-icon ice-gift"></div>
+              <span>礼物</span>
+            </div>
+            <div class="nav-item">
+              <div class="nav-icon ice-member"></div>
+              <span>进入&关注</span>
+            </div>
+            <div class="nav-item">
+              <div class="nav-icon ice-data ice"></div>
+              <span>主播数据</span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+      <div class="caption">Page 4 · 直播功能页（竖屏 - 弹幕）</div>
+    </div>
+
+    <!-- Page 4b: Gift Tab (not logged in) -->
+    <div class="preview-card">
+      <div class="device">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="header"><span>直播间 560402456867</span><span class="settings" title="更多设置"></span></div>
+          <div class="content" style="padding-bottom:0;">
+            <div class="sim-info-strip"><span>在线观众 <b>556863</b></span><span style="color:var(--tip);">|</span><span>粉丝 <b>24039502</b></span></div>
+            <div class="cast-list" style="position:relative;">
+              <div class="session-overlay">
+                <div class="key-icon"><i class="ice-keya ice"></i></div>
+                <p class="tip-text">登录抖音账号后才可显示礼物信息</p>
+                <button class="btn" style="width:auto;min-width:160px;" onclick="document.getElementById('page4b-login').scrollIntoView({behavior:'smooth'})">抖音扫码 / 网页登录</button>
+              </div>
+            </div>
+          </div>
+          <div class="bottom-nav">
+            <div class="nav-item"><div class="nav-icon ice-cast ice"></div><span>弹幕</span></div>
+            <div class="nav-item active"><div class="nav-icon ice-gift"></div><span>礼物</span></div>
+            <div class="nav-item"><div class="nav-icon ice-member"></div><span>进入&关注</span></div>
+            <div class="nav-item"><div class="nav-icon ice-data ice"></div><span>主播数据</span></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="caption">Page 4b · 礼物（未登录）</div>
+    </div>
+
+    <!-- Page 4b-login: Webview Login -->
+    <div class="preview-card" id="page4b-login">
+      <div class="device">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="header">
+            <span class="back"></span>
+            <span>抖音网页登录</span>
+          </div>
+          <div class="content">
+            <div class="webview-box">抖音登录 WebView<br>自动提取 sessionid 并跳转</div>
+            <div class="webview-toolbar">
+              <button class="btn secondary small" style="flex:1;">关闭</button>
+              <button class="btn small" style="flex:1;">已完成登录</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">Page 4b-login · 抖音网页登录 WebView</div>
+    </div>
+
+    <!-- Page 4b: Gift Tab (logged in) -->
+    <div class="preview-card">
+      <div class="device">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="header"><span>直播间 560402456867</span><span class="settings" title="更多设置"></span></div>
+          <div class="content" style="padding-bottom:0;">
+            <div class="sim-info-strip"><span>在线观众 <b>556863</b></span><span style="color:var(--tip);">|</span><span>粉丝 <b>24039502</b></span></div>
+            <div class="session-bar">
+              <div class="session-avatar"><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=cute%20grey%20and%20white%20cat%20avatar%2C%20simple%20cartoon%20style%2C%20round%20portrait%2C%20clean%20white%20background&image_size=square" alt="avatar" onerror="this.style.display='none';this.parentNode.innerHTML='<i class=\'ice-keya ice\'></i>'" /></div>
+              <div class="session-info">
+                <div class="session-title">九渊菌</div>
+                <div class="session-value">关注 225 | 粉丝 75</div>
+              </div>
+              <div class="session-action ice-keya ice" title="登录/更换"></div>
+            </div>
+            <div class="cast-list">
+              <!-- 礼物图标取自 WebSocket 消息中 gift.icon 字段，与 Windows 版 CastItem.vue 一致 -->
+              <div class="cast-item">
+                <span class="user">粉丝E</span>
+                <span class="gift-text"> 送出了 </span>
+                <img class="gift-icon" src="https://p3.douyinpic.com/aweme-client-static-resource/im_gold_coin.png~tplv-obj.image" alt="小心心" title="gift.icon: 小心心" onerror="this.style.display='none'" />
+                <span class="gift-amount">×99</span>
+              </div>
+              <div class="cast-item">
+                <span class="user">粉丝F</span>
+                <span class="gift-text"> 送出了 </span>
+                <img class="gift-icon" src="https://p26-detailpage.byteimg.com/tos-cn-i-ojoqa5bfdv/ic_gift_filled.png~tplv-ojoqa5bfdv-ec-imagex-origin.png" alt="抖音" title="gift.icon: 抖音" onerror="this.style.display='none'" />
+                <span class="gift-amount">×10</span>
+              </div>
+              <div class="cast-item">
+                <span class="user">粉丝G</span>
+                <span class="gift-text"> 送出了 </span>
+                <img class="gift-icon" src="https://p3.douyinpic.com/aweme-client-static-resource/chat_days_purple_3140%403x.png~tplv-obj.image" alt="棒棒糖" title="gift.icon: 棒棒糖" onerror="this.style.display='none'" />
+                <span class="gift-amount">×66</span>
+              </div>
+            </div>
+          </div>
+          <div class="bottom-nav">
+            <div class="nav-item"><div class="nav-icon ice-cast ice"></div><span>弹幕</span></div>
+            <div class="nav-item active"><div class="nav-icon ice-gift"></div><span>礼物</span></div>
+            <div class="nav-item"><div class="nav-icon ice-member"></div><span>进入&关注</span></div>
+            <div class="nav-item"><div class="nav-icon ice-data ice"></div><span>主播数据</span></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="caption">Page 4b · 礼物（已登录 · 真实礼物图）</div>
+    </div>
+
+    <!-- Page 4c: Member & Social Tab -->
+    <div class="preview-card">
+      <div class="device">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="header"><span>直播间 560402456867</span><span class="settings" title="更多设置"></span></div>
+          <div class="content" style="padding-bottom:0;">
+            <div class="sim-info-strip"><span>在线观众 <b>556863</b></span><span style="color:var(--tip);">|</span><span>粉丝 <b>24039502</b></span></div>
+            <div class="sim-chips">
+              <div class="sim-chip active">全部</div>
+              <div class="sim-chip">进入</div>
+              <div class="sim-chip">关注</div>
+              <div class="sim-chip">粉丝团</div>
+            </div>
+            <div class="cast-list">
+              <div class="cast-item"><span class="user">王先生。</span><span class="social-tag"> 进入直播间</span></div>
+              <div class="cast-item"><span class="user">Aurora</span><span class="social-tag"> 进入直播间</span></div>
+              <div class="cast-item"><span class="user">毛大师</span><span class="social-tag"> 关注了主播</span></div>
+              <div class="cast-item"><span class="user">快乐市民老叶</span><span class="social-tag"> 关注了主播</span></div>
+              <div class="cast-item"><span class="user">水波蛋</span><span class="social-tag"> 进入直播间</span></div>
+              <div class="cast-item"><span class="user">雾散🌴</span><span class="social-tag"> 为主播点赞了(6)</span></div>
+            </div>
+          </div>
+          <div class="bottom-nav">
+            <div class="nav-item"><div class="nav-icon ice-cast ice"></div><span>弹幕</span></div>
+            <div class="nav-item"><div class="nav-icon ice-gift"></div><span>礼物</span></div>
+            <div class="nav-item active"><div class="nav-icon ice-member"></div><span>进入&关注</span></div>
+            <div class="nav-item"><div class="nav-icon ice-data ice"></div><span>主播数据</span></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="caption">Page 4c · 进入&关注&粉丝团</div>
+    </div>
+
+    <!-- Page 4d: Live Data Tab -->
+    <div class="preview-card">
+      <div class="device">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="header"><span>直播间 560402456867</span><span class="settings" title="更多设置"></span></div>
+          <div class="content" style="padding-bottom:0;">
+            <div class="sim-info-strip"><span>在线观众 <b>556863</b></span><span style="color:var(--tip);">|</span><span>粉丝 <b>24039502</b></span></div>
+            <div class="data-cover">
+              <img src="https://picsum.photos/seed/dycastcover/400/225" alt="cover" onerror="this.style.display='none';this.parentNode.textContent='暂无封面'" />
+            </div>
+            <div class="info-row"><span class="k">主播</span><span class="v" style="display:flex;align-items:center;gap:5px;"><img src="https://p26.douyinpic.com/aweme/100x100/aweme-avatar/tos-cn-avt-0015_d62939028f9e43884a95e37c8bec4061.jpeg?from=3067671334" alt="avatar" style="width:16px;height:16px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'" />陈伯(全能王)</span></div>
+            <div class="info-row"><span class="k">在线观众数</span><span class="v">10万+</span></div>
+            <div class="info-row"><span class="k">累计观看数</span><span class="v">11454845</span></div>
+            <div class="info-row"><span class="k">本场点赞数</span><span class="v">65997427</span></div>
+            <div class="info-row"><span class="k">粉丝数</span><span class="v">24039940</span></div>
+            <div class="info-row"><span class="k">本场关注数</span><span class="v">-</span></div>
+            <div class="info-row"><span class="k">最高在线人数</span><span class="v">-</span></div>
+            <div class="info-row"><span class="k">已播时长</span><span class="v">00:01:30</span></div>
+          </div>
+          <div class="bottom-nav">
+            <div class="nav-item"><div class="nav-icon ice-cast ice"></div><span>弹幕</span></div>
+            <div class="nav-item"><div class="nav-icon ice-gift"></div><span>礼物</span></div>
+            <div class="nav-item"><div class="nav-icon ice-member"></div><span>进入&关注</span></div>
+            <div class="nav-item active"><div class="nav-icon ice-data ice"></div><span>主播数据</span></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="caption">Page 4d · 主播数据（不含 sessionid）</div>
+    </div>
+
+    <!-- Page 4f: More Functions Full Page -->
+    <div class="preview-card">
+      <div class="device">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="more-page">
+            <div class="more-page-header">
+              <span class="more-page-back"></span>
+              <span>设置</span>
+            </div>
+            <div class="more-page-body">
+              <div class="more-group">
+                <div class="more-group-title">工具</div>
+                <div class="more-item">
+                  <span class="icon ice-stat ice"></span>
+                  <span>控制台</span>
+                  <span class="arrow"></span>
+                </div>
+                <div class="more-item">
+                  <span class="icon ice-save ice"></span>
+                  <span>保存弹幕</span>
+                  <span class="arrow"></span>
+                </div>
+                <div class="more-item">
+                  <span class="icon ice-room-id ice"></span>
+                  <span>切换房间号</span>
+                  <span class="arrow"></span>
+                </div>
+              </div>
+              <div class="more-group">
+                <div class="more-group-title">通知</div>
+                <div class="more-item">
+                  <span class="icon ice-msg ice"></span>
+                  <span>通知设置</span>
+                  <span class="arrow"></span>
+                </div>
+              </div>
+              <div class="more-group">
+                <div class="more-group-title">账号</div>
+                <div class="more-item">
+                  <span class="icon ice-keya ice"></span>
+                  <span>登录 / 更换账号</span>
+                  <span class="arrow"></span>
+                </div>
+                <div class="more-item">
+                  <span class="icon ice-close ice"></span>
+                  <span>退出登录</span>
+                  <span class="arrow"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">Page 4f · 设置页</div>
+    </div>
+
+    <!-- Page 4f2: Notification Settings -->
+    <div class="preview-card">
+      <div class="device">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="more-page">
+            <div class="more-page-header">
+              <span class="more-page-back"></span>
+              <span>通知设置</span>
+            </div>
+            <div class="notify-body">
+              <div class="notify-group">
+                <div class="notify-row"><span class="notify-icon ice-setting ice"></span><span>总开关</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+                <div class="notify-row"><span class="notify-icon ice-cast ice"></span><span>前台时也推送</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+                <div class="notify-row"><span class="notify-icon ice-save ice"></span><span>后台时推送</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+              </div>
+              <div class="notify-group">
+                <div class="notify-group-title">消息类型</div>
+                <div class="notify-row"><span class="notify-icon ice-cast ice"></span><span>弹幕</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+                <div class="notify-row"><span class="notify-icon ice-gift ice"></span><span>礼物</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+                <div class="notify-row"><span class="notify-icon ice-member ice"></span><span>进入</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+                <div class="notify-row"><span class="notify-icon ice-member ice"></span><span>关注</span><div class="switch"><div class="switch-thumb"></div></div></div>
+                <div class="notify-row"><span class="notify-icon ice-member ice"></span><span>粉丝团</span><div class="switch"><div class="switch-thumb"></div></div></div>
+                <div class="notify-row"><span class="notify-icon ice-config ice"></span><span>点赞</span><div class="switch"><div class="switch-thumb"></div></div></div>
+              </div>
+              <div class="notify-group">
+                <div class="notify-group-title">合并设置</div>
+                <div class="notify-row"><span class="notify-icon ice-config ice"></span><span>合并间隔（秒）</span><input class="notify-number" value="3" /></div>
+                <div class="notify-hint">0 表示不合并，每条消息单独通知</div>
+              </div>
+              <div class="notify-group">
+                <div class="notify-group-title">后台保活</div>
+                <div class="notify-row"><span class="notify-icon ice-stat ice"></span><span>开启前台服务保活</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+                <div class="notify-row"><span class="notify-icon ice-setting ice"></span><span>电池优化白名单</span><span class="notify-arrow"></span></div>
+                <div class="notify-row"><span class="notify-icon ice-config ice"></span><span>自启动 / 后台运行设置</span><span class="notify-arrow"></span></div>
+                <div class="notify-row"><span class="notify-icon ice-stat ice"></span><span>保活引导</span><span class="notify-arrow"></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">Page 4f2 · 通知设置（含推送开关、消息类型、合并间隔、后台保活）</div>
+    </div>
+
+    <!-- Page 4g: Console Page -->
+    <div class="preview-card">
+      <div class="device">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="more-page">
+            <div class="more-page-header">
+              <span class="more-page-back"></span>
+              <span>控制台</span>
+            </div>
+            <div class="more-page-body" style="background:var(--bg);font-family:'Menlo','Consolas',monospace;">
+              <div class="console-log info"><span class="time">12:00:01</span><span class="tag">[连接]</span>正在连接: 560402456867</div>
+              <div class="console-log success"><span class="time">12:00:02</span><span class="tag">[连接]</span>房间连接成功: 560402456867</div>
+              <div class="console-log info"><span class="time">12:00:05</span><span class="tag">[消息]</span>收到弹幕消息 4 条</div>
+              <div class="console-log error"><span class="time">12:01:10</span><span class="tag">[重连]</span>连接断开，3秒后重连</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">Page 4g · 控制台页</div>
+    </div>
+
+    <!-- Page 4h: Save Danmaku Page -->
+    <div class="preview-card">
+      <div class="device">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="more-page">
+            <div class="more-page-header">
+              <span class="more-page-back"></span>
+              <span>保存弹幕</span>
+            </div>
+            <div class="more-page-body">
+              <div class="modal-card" style="box-shadow:none;border:1px solid var(--bd);margin-top:10px;align-self:center;">
+                <div class="modal-title">保存弹幕</div>
+                <input class="input" placeholder="文件名（可选）" value="[921169302662]2026-09-03_003635(1475).json" />
+                <div class="modal-desc">将当前已接收的弹幕、礼物、进入关注记录保存为 JSON 文件。点击保存后弹出系统文件选择器以确认存储位置。</div>
+                <div class="btn-row">
+                  <button class="btn secondary">取消</button>
+                  <button class="btn">保存</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">Page 4h · 保存弹幕页</div>
+    </div>
+
+    <!-- Page 4i: Switch Room Page -->
+    <div class="preview-card">
+      <div class="device">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="more-page">
+            <div class="more-page-header">
+              <span class="more-page-back"></span>
+              <span>切换房间号</span>
+            </div>
+            <div class="more-page-body">
+              <div class="modal-card" style="box-shadow:none;border:1px solid var(--bd);margin-top:10px;align-self:center;">
+                <div class="modal-title">切换房间号</div>
+                <input class="input" placeholder="房间号 / 直播链接" value="560402456867" />
+                <div class="modal-desc">输入新的房间号或抖音直播链接，切换后将重新连接直播间。</div>
+                <div class="btn-row">
+                  <button class="btn secondary">取消</button>
+                  <button class="btn">切换</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">Page 4i · 切换房间号页</div>
+    </div>
+
+</div>
+
+  <div class="grid-ls">
+
+    <!-- ==================== 各页面横屏版本平展卡片（横屏全屏页，内容由脚本按共享模板生成，直播三栏为已连接状态） ==================== -->
+    <div class="preview-card wide"><div class="device landscape"><div class="screen" data-ls-card="home"></div></div><div class="caption">Page 5c · 首页（横屏 · 全屏）</div></div>
+    <div class="preview-card wide"><div class="device landscape"><div class="screen" data-ls-card="confirm"></div></div><div class="caption">Page 5d · 确认主播（横屏 · 直播中）</div></div>
+    <div class="preview-card wide"><div class="device landscape"><div class="screen" data-ls-card="confirm-dead"></div></div><div class="caption">Page 5e · 确认主播（横屏 · 未开播）</div></div>
+    <div class="preview-card wide" id="page5b-login"><div class="device landscape"><div class="screen" data-ls-card="login"></div></div><div class="caption">Page 5f · 登录抖音账号（横屏 · 全屏）</div></div>
+    <div class="preview-card wide"><div class="device landscape"><div class="screen" data-ls-card="webview"></div></div><div class="caption">Page 5g · 抖音网页登录（横屏 · 全屏）</div></div>
+    <!-- Page 5: Landscape Live -->
+    <div class="preview-card wide">
+      <div class="device landscape">
+        <div class="screen">
+          <div class="win-layout">
+            <div class="win-left">
+              <div class="win-panel" style="flex:0 0 auto;">
+                <div class="win-panel-header">
+                  <span class="win-panel-dots"><span></span><span></span><span></span></span>
+                  <span class="win-panel-title">直播信息</span>
+                </div>
+                <div class="win-panel-body">
+                  <div class="cover-box" style="aspect-ratio:16/9;border-radius:4px;margin-bottom:3px;"><img src="https://picsum.photos/seed/dycastcover/400/225" alt="cover" onerror="this.style.display='none';this.parentNode.appendChild(document.createTextNode('暂无封面'))" /></div>
+                  <div class="cover-title" style="font-size:9px;margin-bottom:4px;">陈伯大舞台有梦你就来！</div>
+                  <div class="small-info"><span class="k">主播</span><span class="v">陈伯(全能王)</span></div>
+                  <div class="small-info"><span class="k">主播粉丝数</span><span class="v">24038415</span></div>
+                  <div class="small-info"><span class="k">在线观众数</span><span class="v">556863</span></div>
+                  <div class="small-info"><span class="k">累计观看人数</span><span class="v">11454845</span></div>
+                  <div class="small-info"><span class="k">本场点赞数</span><span class="v">65997427</span></div>
+                </div>
+              </div>
+              <div class="win-user-card">
+                <div class="win-user-avatar"><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=cute%20grey%20and%20white%20cat%20avatar%2C%20simple%20cartoon%20style%2C%20round%20portrait%2C%20clean%20white%20background&image_size=square" alt="avatar" onerror="this.style.display='none';this.parentNode.innerHTML='<i class=\'ice-keya ice\'></i>'" /></div>
+                <div class="win-user-info">
+                  <div class="win-user-name">九渊菌</div>
+                  <div class="win-user-fs">关注 225 | 粉丝 75</div>
+                </div>
+                <div class="win-user-action" title="退出登录">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+                </div>
+              </div>
+              <div class="win-icon-tools">
+                <div class="win-icon-btn ice-stat ice" title="控制台"></div>
+                <div class="win-icon-btn ice-setting ice" title="设置"></div>
+              </div>
+              <div class="win-timer">00:00:00</div>
+              <div class="win-status"><div class="win-status-dot offline"></div><span>未连接</span></div>
+            </div>
+            <div class="win-center">
+              <div class="win-panel" style="flex:1;">
+                <div class="win-panel-header">
+                  <span class="win-panel-dots"><span></span><span></span><span></span></span>
+                  <span class="win-panel-title">弹幕信息</span>
+                </div>
+                <div class="win-panel-body cast-list" style="border:none;background:transparent;">
+                  <div class="cast-empty">暂无消息</div>
+                </div>
+              </div>
+              <div class="win-panel" style="flex:1;">
+                <div class="win-panel-header">
+                  <span class="win-panel-dots"><span></span><span></span><span></span></span>
+                  <span class="win-panel-title">礼物信息</span>
+                </div>
+                <div class="win-panel-body cast-list" style="border:none;background:transparent;">
+                  <div class="cast-empty">暂无消息</div>
+                </div>
+              </div>
+            </div>
+            <div class="win-right">
+              <div class="win-panel force-light">
+                <div class="win-panel-header">
+                  <span class="win-panel-dots"><span></span><span></span><span></span></span>
+                  <span class="win-panel-title">房间号 & 直播链接</span>
+                </div>
+                <div class="win-panel-body">
+                  <div class="win-input-row">
+                    <input class="input" placeholder="请输入房间号或直播链接" value="560402456867" style="flex:1;" />
+                    <button class="btn">连接</button>
+                  </div>
+                </div>
+              </div>
+              <div class="win-panel force-light" style="flex:1;">
+                <div class="win-panel-header">
+                  <span class="win-panel-dots"><span></span><span></span><span></span></span>
+                  <span class="win-panel-title">进入 & 关注 & 粉丝团信息</span>
+                </div>
+                <div class="win-panel-body cast-list" style="border:none;background:transparent;">
+                  <div class="cast-empty">暂无消息</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">Page 5 · 直播功能页（横屏三栏 · 已登录）</div>
+    </div>
+
+    <!-- Page 5b: Landscape Live (Not Logged In) -->
+    <div class="preview-card wide">
+      <div class="device landscape">
+        <div class="screen">
+          <div class="win-layout">
+            <div class="win-left">
+              <div class="win-panel" style="flex:0 0 auto;">
+                <div class="win-panel-header">
+                  <span class="win-panel-dots"><span></span><span></span><span></span></span>
+                  <span class="win-panel-title">直播信息</span>
+                </div>
+                <div class="win-panel-body">
+                  <div class="cover-box" style="aspect-ratio:16/9;border-radius:4px;margin-bottom:3px;"><img src="https://picsum.photos/seed/dycastcover/400/225" alt="cover" onerror="this.style.display='none';this.parentNode.appendChild(document.createTextNode('暂无封面'))" /></div>
+                  <div class="cover-title" style="font-size:9px;margin-bottom:4px;">陈伯大舞台有梦你就来！</div>
+                  <div class="small-info"><span class="k">主播</span><span class="v">陈伯(全能王)</span></div>
+                  <div class="small-info"><span class="k">主播粉丝数</span><span class="v">24038415</span></div>
+                  <div class="small-info"><span class="k">在线观众数</span><span class="v">556863</span></div>
+                  <div class="small-info"><span class="k">累计观看人数</span><span class="v">11454845</span></div>
+                  <div class="small-info"><span class="k">本场点赞数</span><span class="v">65997427</span></div>
+                </div>
+              </div>
+              <div class="win-user-card">
+                <div class="win-user-avatar"><i class="ice-keya ice"></i></div>
+                <div class="win-user-info">
+                  <div class="win-user-name">未登录</div>
+                  <div class="win-user-fs">关注 0 | 粉丝 0</div>
+                </div>
+                <div class="win-user-action" title="登录/更换">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+                </div>
+              </div>
+              <div class="win-icon-tools">
+                <div class="win-icon-btn ice-stat ice" title="控制台"></div>
+                <div class="win-icon-btn ice-setting ice" title="设置"></div>
+              </div>
+              <div class="win-timer">00:00:00</div>
+              <div class="win-status"><div class="win-status-dot offline"></div><span>未连接</span></div>
+            </div>
+            <div class="win-center">
+              <div class="win-panel" style="flex:1;">
+                <div class="win-panel-header">
+                  <span class="win-panel-dots"><span></span><span></span><span></span></span>
+                  <span class="win-panel-title">弹幕信息</span>
+                </div>
+                <div class="win-panel-body cast-list" style="border:none;background:transparent;">
+                  <div class="cast-empty">暂无消息</div>
+                </div>
+              </div>
+              <div class="win-panel" style="flex:1;">
+                <div class="win-panel-header">
+                  <span class="win-panel-dots"><span></span><span></span><span></span></span>
+                  <span class="win-panel-title">礼物信息</span>
+                </div>
+                <div class="win-panel-body cast-list" style="border:none;background:transparent;">
+                  <div class="panel-login-tip">
+                    <div class="key-icon"><i class="ice-keya ice"></i></div>
+                    <p class="tip-text">登录抖音账号后才可显示礼物信息</p>
+                    <button class="btn" onclick="document.getElementById('page5b-login').scrollIntoView({behavior:'smooth'})">抖音扫码 / 网页登录</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="win-right">
+              <div class="win-panel force-light">
+                <div class="win-panel-header">
+                  <span class="win-panel-dots"><span></span><span></span><span></span></span>
+                  <span class="win-panel-title">房间号 & 直播链接</span>
+                </div>
+                <div class="win-panel-body">
+                  <div class="win-input-row">
+                    <input class="input" placeholder="请输入房间号或直播链接" value="560402456867" style="flex:1;" />
+                    <button class="btn">连接</button>
+                  </div>
+                </div>
+              </div>
+              <div class="win-panel force-light" style="flex:1;">
+                <div class="win-panel-header">
+                  <span class="win-panel-dots"><span></span><span></span><span></span></span>
+                  <span class="win-panel-title">进入 & 关注 & 粉丝团信息</span>
+                </div>
+                <div class="win-panel-body cast-list" style="border:none;background:transparent;">
+                  <div class="cast-empty">暂无消息</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">Page 5b · 直播功能页（横屏三栏 · 未登录）</div>
+    </div>
+    <div class="preview-card wide"><div class="device landscape"><div class="screen" data-ls-card="more"></div></div><div class="caption">Page 5h · 设置（横屏 · 一级/二级菜单）</div></div>
+    <div class="preview-card wide"><div class="device landscape"><div class="screen" data-ls-card="notify"></div></div><div class="caption">Page 5i · 通知设置（横屏 · 全屏）</div></div>
+    <div class="preview-card wide"><div class="device landscape"><div class="screen" data-ls-card="console"></div></div><div class="caption">Page 5j · 控制台（横屏 · 全屏）</div></div>
+    <div class="preview-card wide"><div class="device landscape"><div class="screen" data-ls-card="save"></div></div><div class="caption">Page 5k · 保存弹幕（横屏 · 全屏）</div></div>
+    <div class="preview-card wide"><div class="device landscape"><div class="screen" data-ls-card="switch"></div></div><div class="caption">Page 5l · 切换房间号（横屏 · 全屏）</div></div>
+
+    <!-- Known Issues & Imperfect Features -->
+    <div class="preview-card wide" id="known-issues">
+      <div style="width:100%;padding:12px 14px;background:var(--white);border:1px solid var(--bd);border-radius:6px;">
+        <h3 style="margin:0 0 8px;font-size:13px;color:var(--title);">当前未完善 / 需关注的功能点</h3>
+        <ul style="margin:0;padding-left:18px;font-size:11px;line-height:1.8;color:var(--text);">
+          <li><strong>通知设置页</strong>：电池优化白名单、自启动/后台运行设置、保活引导依赖系统级 API 跳转，部分国产定制系统可能无法正确打开对应设置页。</li>
+          <li><strong>通知推送</strong>：在华为、小米、OPPO、vivo 等定制 ROM 上，后台推送可能被系统限制或延迟，需用户手动开启自启动/电池白名单。</li>
+          <li><strong>WebView 登录</strong>：抖音网页登录依赖系统 WebView 组件，若 WebView 版本过低或 Cookie 策略受限，可能导致登录态提取失败。</li>
+          <li><strong>礼物信息</strong>：必须登录抖音账号后才能显示礼物信息；未登录时礼物面板仅展示登录引导。</li>
+          <li><strong>深色模式</strong>：部分边框/分隔线在深色模式下对比度不足，已列入下一轮 App 修复计划（提亮深色边框变量），本预览稿与真机现状保持一致。</li>
+          <li><strong>首页最近进入</strong>：首次安装无最近记录时，首页下半部分较空，暂无空状态引导。</li>
+          <li><strong>横屏页面流程</strong>：与竖屏一致（连接直播间 → 确认主播 → 账号登录 → 三栏主界面）；设置页为一级 / 二级菜单，通知/控制台/保存/切换为横屏优化全屏页。</li>
+          <li><strong>模拟器说明</strong>：顶部双视图模拟器仅用于 UI 预览与交互演示，不涉及真实网络连接与消息推送，消息流为模拟数据。</li>
+          <li><strong>首页搜索主播</strong>：输入框下方「搜索主播」按钮为本轮新增设计，App 端将在下一版本实装。</li>
+          <li><strong>顶部安全区</strong>：已增加 12px 额外间距，但仍需在更多机型（尤其是挖孔/刘海屏）上实测确认效果。</li>
+        </ul>
+      </div>
+      <div class="caption">Known Issues · 当前未完善或需后续迭代的点</div>
+    </div>
+
+  </div>
+
+  <script>
+    /* ================= 主题切换 ================= */
+    function toggleTheme() {
+      document.documentElement.classList.toggle('force-dark');
+      const btn = document.querySelector('.theme-toggle');
+      if (btn) {
+        btn.textContent = document.documentElement.classList.contains('force-dark') ? '切换浅色模式' : '切换深色模式';
+      }
+    }
+
+    /* ================= 共享状态（双模拟器唯一数据源） ================= */
+    const state = window.__previewState = {
+      page: 'home',            // home | confirm | search | login | webview | live | more | notify | console | save | switch
+      roomInput: '',
+      roomNum: '921169302662',
+      isLiving: true,
+      isLoggedIn: false,
+      connected: false,
+      liveTab: 'chat',         // chat | gift | social | data
+      socialFilter: 'all',     // all | enter | follow | fans
+      switchInput: '921169302662',
+      loginBack: 'confirm',
+      lsSettingsGroup: 'tools',
+      moreBack: 'live',
+      consoleBack: 'more',
+      elapsed: 90,
+      recentRooms: [
+        { name: '陈伯(全能王)', roomNum: '921169302662' },
+        { name: '涛涛📷', roomNum: '397624714394' }
+      ],
+      liveData: {
+        anchor: '陈伯(全能王)',
+        title: '陈伯大舞台有梦你就来！',
+        fans: '24038415', audience: '542787', totalViews: '11421619', likes: '64349761', liveFans: '24039502'
+      },
+      messages: {
+        chat: [
+          { user: '✨紫气来✨', msg: '那分一万五' },
+          { user: '🌈闭关中的tony', msg: '他可是功臣' },
+          { user: 'boy~看', msg: '2万就可以了' },
+          { user: 'XXWWY888888', msg: '2万' },
+          { user: '仲夏', msg: '五万' },
+          { user: '山治', msg: '伯哥牛大了已站在顶端' }
+        ],
+        gift: [
+          { user: '粉丝E', name: '小心心', icon: 'https://p3.douyinpic.com/aweme-client-static-resource/im_gold_coin.png~tplv-obj.image', amount: 99 },
+          { user: '粉丝F', name: '抖音', icon: 'https://p26-detailpage.byteimg.com/tos-cn-i-ojoqa5bfdv/ic_gift_filled.png~tplv-ojoqa5bfdv-ec-imagex-origin.png', amount: 10 },
+          { user: '粉丝G', name: '棒棒糖', icon: 'https://p3.douyinpic.com/aweme-client-static-resource/chat_days_purple_3140%403x.png~tplv-obj.image', amount: 66 }
+        ],
+        social: [
+          { user: '王先生。', type: 'enter', text: '进入直播间' },
+          { user: 'Aurora', type: 'enter', text: '进入直播间' },
+          { user: '毛大师', type: 'follow', text: '关注了主播' },
+          { user: '快乐市民老叶', type: 'follow', text: '关注了主播' },
+          { user: '水波蛋', type: 'enter', text: '进入直播间' },
+          { user: '雾散🌴', type: 'like', text: '为主播点赞了(6)' }
+        ]
+      },
+      logs: [
+        { t: '00:34:58', tag: '连接', cls: 'info', text: '正在连接： 921169302662' },
+        { t: '00:34:59', tag: '连接', cls: 'success', text: '房间连接成功： 921169302662' }
+      ],
+      notify: { master: true, foreground: false, background: true, chat: true, gift: true, enter: false, follow: true, fansclub: true, like: false, keepalive: true, merge: 0 }
+    };
+
+    const GIFT_POOL = [
+      { name: '小心心', icon: 'https://p3.douyinpic.com/aweme-client-static-resource/im_gold_coin.png~tplv-obj.image' },
+      { name: '抖音', icon: 'https://p26-detailpage.byteimg.com/tos-cn-i-ojoqa5bfdv/ic_gift_filled.png~tplv-ojoqa5bfdv-ec-imagex-origin.png' },
+      { name: '棒棒糖', icon: 'https://p3.douyinpic.com/aweme-client-static-resource/chat_days_purple_3140%403x.png~tplv-obj.image' }
+    ];
+    const CHAT_POOL = ['22222w', '666', '点点关注+苹果17', '好听', '来了来了', '主播666', '哈哈哈', '1万可以了', '霸气', '全给他', '9.9', '2W'];
+    const CHAT_USERS = ['🌈执念', '曲殇', 'mm', '小哥', 'ZYF66', '是你', '布鲁bbbiu', 'xfr', '承影', '倒悬山的小剑童', '取个名字😊', '我只对你好'];
+    const SOCIAL_POOL = [
+      { type: 'enter', text: '进入直播间' },
+      { type: 'follow', text: '关注了主播' },
+      { type: 'fans', text: '加入了粉丝团' }
+    ];
+
+    /* ================= 工具函数 ================= */
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function fmtElapsed(s) {
+      const h = String(Math.floor(s / 3600)).padStart(2, '0');
+      const m = String(Math.floor(s % 3600 / 60)).padStart(2, '0');
+      const sec = String(s % 60).padStart(2, '0');
+      return h + ':' + m + ':' + sec;
+    }
+    function nowStr() { return new Date().toTimeString().slice(0, 8); }
+    function saveFileName() {
+      const d = new Date();
+      const p = n => String(n).padStart(2, '0');
+      const stamp = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + '_' + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+      const count = state.messages.chat.length + state.messages.gift.length + state.messages.social.length;
+      return '[' + state.roomNum + ']' + stamp + '(' + count + ').json';
+    }
+    function pushLog(tag, cls, text) {
+      state.logs.push({ t: nowStr(), tag, cls, text });
+      if (state.logs.length > 40) state.logs.shift();
+    }
+
+    /* ================= 消息片段模板 ================= */
+    function chatItemsHtml() {
+      return state.messages.chat.map(m => `<div class="cast-item"><span class="user">${esc(m.user)}：</span><span class="msg">${esc(m.msg)}</span></div>`).join('');
+    }
+    function giftItemsHtml() {
+      return state.messages.gift.map(g =>
+        `<div class="cast-item"><span class="user">${esc(g.user)}</span><span class="gift-text"> 送出了 </span><img class="gift-icon" src="${g.icon}" alt="${esc(g.name)}" title="gift.icon: ${esc(g.name)}" onerror="this.style.display='none'" /><span class="gift-amount">×${g.amount}</span></div>`
+      ).join('');
+    }
+    function socialItemsHtml(filter) {
+      const f = filter || 'all';
+      return state.messages.social
+        .filter(it => f === 'all' || it.type === f)
+        .map(it => `<div class="cast-item"><span class="user">${esc(it.user)}</span><span class="social-tag"> ${esc(it.text)}</span></div>`).join('');
+    }
+    function logsHtml() {
+      return state.logs.map(l => `<div class="console-log ${l.cls}"><span class="time">${l.t}</span><span class="tag">[${l.tag}]</span>${esc(l.text)}</div>`).join('');
+    }
+
+    /* ================= 竖屏页面模板 ================= */
+    function pHeader(title, opts) {
+      opts = opts || {};
+      return `<div class="header">
+        ${opts.back ? `<span class="back" onclick="${opts.back}"></span>` : ''}
+        <span>${title}</span>
+        ${opts.settings ? `<span class="settings" title="设置" onclick="setPage('more')"></span>` : ''}
+      </div>`;
+    }
+
+    function recentHtml() {
+      if (!state.recentRooms.length) return '';
+      return `
+        <div class="recent-section">
+          <p class="recent-title">最近进入</p>
+          <div class="recent-table">
+            <div class="recent-row">${state.recentRooms.map(r => `<span class="recent-cell recent-name" onclick="fillRoom('${r.roomNum}')">${esc(r.name)}</span>`).join('')}</div>
+            <div class="recent-row">${state.recentRooms.map(r => `<span class="recent-cell recent-id" onclick="fillRoom('${r.roomNum}')">${r.roomNum}</span>`).join('')}</div>
+          </div>
+        </div>`;
+    }
+
+    function recentPillsHtml(inert) {
+      if (!state.recentRooms.length) return '';
+      return `
+        <div class="recent-section" style="margin-top:0;padding-top:0;">
+          <p class="recent-title">最近进入</p>
+          <div class="recent-pills">${state.recentRooms.map(r => `<span class="recent-pill"${inert ? '' : ` onclick="fillRoom('${r.roomNum}')"`}>${esc(r.name)} <span class="rp-id">${r.roomNum}</span></span>`).join('')}</div>
+        </div>`;
+    }
+
+    function pageHome() {
+      return `
+        <div class="header"><span>抖音直播弹幕助手</span></div>
+        <div class="content">
+          <div class="room-form">
+            <img class="room-form-icon" src="/preview-assets/app-icon.png" alt="应用图标" />
+            <h2 class="room-form-title">连接直播间</h2>
+            <p class="room-form-subtitle">输入房间号和直播链接开始使用</p>
+            <input class="room-form-input" placeholder="房间号 / 直播链接" value="${esc(state.roomInput)}" oninput="setRoomInput(this.value)" />
+            <button class="btn" ${state.roomInput.trim() ? '' : 'disabled'} onclick="goNext()">下一步</button>
+            <button class="btn secondary" style="margin-bottom:0;" onclick="setPage('search')">搜索主播</button>
+          </div>
+          ${recentHtml()}
+        </div>`;
+    }
+
+    function confirmBodyHtml(dead) {
+      const d = state.liveData;
+      return `
+        <div class="cover-box"><img src="https://picsum.photos/seed/dycastcover/400/225" alt="cover" onerror="this.style.display='none';this.parentNode.appendChild(document.createTextNode('暂无封面'))" /></div>
+        <div class="cover-title">${esc(d.title)}</div>
+        <div class="info-row"><span class="k">主播</span><span class="v">${esc(d.anchor)}</span></div>
+        <div class="info-row"><span class="k">直播状态</span><span class="v">${dead ? '<span style="color:var(--error);font-weight:bold;">未开播</span>' : '<span class="live-badge">直播中</span>'}</span></div>
+        <div class="info-row"><span class="k">主播粉丝数</span><span class="v">${d.fans}</span></div>
+        <div class="info-row"><span class="k">在线观众数</span><span class="v">${dead ? '-' : d.audience}</span></div>
+        <div class="info-row"><span class="k">累计观看人数</span><span class="v">${dead ? '-' : d.totalViews}</span></div>
+        <div class="info-row"><span class="k">本场点赞数</span><span class="v">${dead ? '-' : d.likes}</span></div>
+        <div class="confirm-actions">
+          ${dead ? '' : '<button class="btn" onclick="gotoLogin(\'confirm\')">确认正确，进入下一步</button>'}
+          <button class="btn secondary" onclick="setPage('home')">返回修改</button>
+        </div>`;
+    }
+
+    function pageConfirm() {
+      return pHeader('确认主播', { back: "setPage('home')" }) + `<div class="content" style="padding-top:2px;">${confirmBodyHtml(!state.isLiving)}</div>`;
+    }
+
+    function pageSearch() {
+      return pHeader('抖音直播搜索', { back: "setPage('home')" }) + `
+        <div class="content">
+          <div class="webview-box">抖音直播搜索<br>${state.roomInput.trim() ? '关键词：' + esc(state.roomInput) : '输入关键词后可打开真实抖音搜索'}</div>
+          <div class="webview-toolbar">
+            <button class="btn secondary small" style="flex:1;" onclick="setPage('home')">关闭</button>
+            <button class="btn small" style="flex:1;" onclick="openRealSearch()">在新标签页搜索</button>
+          </div>
+        </div>`;
+    }
+
+    function pageLogin() {
+      return pHeader('登录抖音账号', { back: "backFromLogin()" }) + `
+        <div class="content" style="justify-content:center;">
+          <div style="display:flex;flex-direction:column;align-items:center;width:100%;">
+            <div class="key-icon"><i class="ice-keya ice"></i></div>
+            <p class="tip-text">登录抖音账号后才可显示礼物信息</p>
+          </div>
+          <div style="width:100%;margin-top:18px;">
+            <button class="btn" style="margin-bottom:0;" onclick="openRealLogin()">抖音扫码 / 网页登录</button>
+            <div class="skip-row"><span class="skip-link" onclick="enterLive()">跳过，稍后登录</span></div>
+          </div>
+        </div>`;
+    }
+
+    function pageWebview() {
+      return pHeader('抖音网页登录', { back: "setPage('login')" }) + `
+        <div class="content">
+          <div class="webview-box">抖音网页登录<br>需在新标签页完成扫码登录</div>
+          <div class="webview-toolbar">
+            <button class="btn secondary small" style="flex:1;" onclick="setPage('login')">关闭</button>
+            <button class="btn small" style="flex:1;" onclick="openRealLogin()">打开真实登录页</button>
+          </div>
+        </div>`;
+    }
+
+    const NAVS = [
+      ['chat', '弹幕', 'ice-cast ice'],
+      ['gift', '礼物', 'ice-gift'],
+      ['social', '进入&关注', 'ice-member'],
+      ['data', '主播数据', 'ice-data ice']
+    ];
+    function navHtml() {
+      return '<div class="bottom-nav">' + NAVS.map(n =>
+        `<div class="nav-item ${state.liveTab === n[0] ? 'active' : ''}" onclick="setLiveTab('${n[0]}')"><div class="nav-icon ${n[2]}"></div><span>${n[1]}</span></div>`
+      ).join('') + '</div>';
+    }
+
+    function liveTabContent() {
+      const d = state.liveData;
+      if (state.liveTab === 'chat') {
+        return `<div class="cast-list" id="psn-live-list">${chatItemsHtml()}</div>`;
+      }
+      if (state.liveTab === 'gift') {
+        if (!state.isLoggedIn) {
+          return `
+            <div class="cast-list" style="position:relative;">
+              <div class="session-overlay">
+                <div class="key-icon"><i class="ice-keya ice"></i></div>
+                <p class="tip-text">登录抖音账号后才可显示礼物信息</p>
+                <button class="btn" style="width:auto;min-width:160px;" onclick="gotoLogin('gift')">抖音扫码 / 网页登录</button>
+              </div>
+            </div>`;
+        }
+        return `
+          <div class="session-bar">
+            <div class="session-avatar"><i class="ice-keya ice"></i></div>
+            <div class="session-info">
+              <div class="session-title">九渊菌</div>
+              <div class="session-value">关注 225 | 粉丝 75</div>
+            </div>
+            <div class="session-action ice-keya ice" title="登录/更换"></div>
+          </div>
+          <div class="cast-list" id="psn-live-list">${giftItemsHtml()}</div>`;
+      }
+      if (state.liveTab === 'social') {
+        const chips = [['all', '全部'], ['enter', '进入'], ['follow', '关注'], ['fans', '粉丝团']];
+        return `
+          <div class="sim-chips">${chips.map(c => `<div class="sim-chip ${state.socialFilter === c[0] ? 'active' : ''}" onclick="setSocialFilter('${c[0]}')">${c[1]}</div>`).join('')}</div>
+          <div class="cast-list" id="psn-live-list">${socialItemsHtml(state.socialFilter)}</div>`;
+      }
+      return `
+        <div style="flex:1;overflow-y:auto;padding-bottom:6px;">
+          <div class="data-cover"><img src="https://picsum.photos/seed/dycastcover/400/225" alt="cover" onerror="this.style.display='none';this.parentNode.textContent='暂无封面'" /></div>
+          <div class="info-row"><span class="k">主播</span><span class="v">${esc(d.anchor)}</span></div>
+          <div class="info-row"><span class="k">在线观众数</span><span class="v" data-stat="data-audience">${d.audience || '-'}</span></div>
+          <div class="info-row"><span class="k">累计观看数</span><span class="v" data-stat="data-totalviews">${d.totalViews || '-'}</span></div>
+          <div class="info-row"><span class="k">本场点赞数</span><span class="v" data-stat="data-likes">${d.likes || '-'}</span></div>
+          <div class="info-row"><span class="k">粉丝数</span><span class="v" data-stat="data-fans">${d.fans || '-'}</span></div>
+          <div class="info-row"><span class="k">本场关注数</span><span class="v">-</span></div>
+          <div class="info-row"><span class="k">最高在线人数</span><span class="v">-</span></div>
+          <div class="info-row"><span class="k">已播时长</span><span class="v"><span id="psn-elapsed" data-elapsed>${fmtElapsed(state.elapsed)}</span></span></div>
+        </div>`;
+    }
+
+    function pageLive() {
+      const d = state.liveData;
+      return pHeader('直播间 ' + state.roomNum, { back: "leaveLive()", settings: true }) + `
+        <div class="content" style="padding-bottom:0;">
+          <div class="sim-info-strip"><span>在线观众 <b data-stat="data-audience">${d.audience || '-'}</b></span><span style="color:var(--tip);">|</span><span>粉丝 <b data-stat="data-fans">${d.fans || '-'}</b></span></div>
+          ${liveTabContent()}
+        </div>
+        ${navHtml()}`;
+    }
+
+    /* ================= 设置/通知/控制台/保存/切换（竖屏全屏页与横屏覆盖层共用） ================= */
+    function moreBodyHtml(inert) {
+      const item = (icon, label, action) =>
+        `<div class="more-item"${inert ? '' : ` onclick="${action}"`}><span class="icon ${icon} ice"></span><span>${label}</span><span class="arrow"></span></div>`;
+      return `
+        <div class="more-group">
+          <div class="more-group-title">工具</div>
+          ${item('ice-stat', '控制台', "openConsole('more')")}
+          ${item('ice-save', '保存弹幕', "setPage('save')")}
+          ${item('ice-room-id', '切换房间号', "setPage('switch')")}
+        </div>
+        <div class="more-group">
+          <div class="more-group-title">通知</div>
+          ${item('ice-msg', '通知设置', "setPage('notify')")}
+        </div>
+        <div class="more-group">
+          <div class="more-group-title">账号</div>
+          ${item('ice-keya', '登录 / 更换账号', "gotoLogin('more')")}
+          ${item('ice-close', '退出登录', 'logout()')}
+          ${item('ice-setting', '设置', 'window.showKeepAliveGuide()')}
+        </div>`;
+    }
+
+    function swRow(icon, label, key, inert) {
+      const on = state.notify[key];
+      return `<div class="notify-row"${inert ? '' : ` onclick="toggleNotify('${key}')"`}><span class="notify-icon ${icon} ice"></span><span>${label}</span><div class="switch ${on ? 'on' : ''}"><div class="switch-thumb"></div></div></div>`;
+    }
+    function arrowRow(icon, label) {
+      return `<div class="notify-row"><span class="notify-icon ${icon} ice"></span><span>${label}</span><span class="notify-arrow"></span></div>`;
+    }
+    function notifyBodyHtml(inert) {
+      return `
+        <div class="notify-group">
+          ${swRow('ice-setting', '总开关', 'master', inert)}
+          ${swRow('ice-cast', '前台时也推送', 'foreground', inert)}
+          ${swRow('ice-save', '后台时推送', 'background', inert)}
+        </div>
+        <div class="notify-group">
+          <div class="notify-group-title">消息类型</div>
+          ${swRow('ice-cast', '弹幕', 'chat', inert)}
+          ${swRow('ice-gift', '礼物', 'gift', inert)}
+          ${swRow('ice-member', '进入', 'enter', inert)}
+          ${swRow('ice-member', '关注', 'follow', inert)}
+          ${swRow('ice-member', '粉丝团', 'fansclub', inert)}
+          ${swRow('ice-config', '点赞', 'like', inert)}
+        </div>
+        <div class="notify-group">
+          <div class="notify-group-title">合并设置</div>
+          <div class="notify-row"><span class="notify-icon ice-config ice"></span><span>合并间隔（秒）</span><input class="notify-number" value="${state.notify.merge}" ${inert ? '' : 'onchange="setMerge(this.value)"'} /></div>
+          <div class="notify-hint">0 表示不合并，每条消息单独通知</div>
+        </div>
+        <div class="notify-group">
+          <div class="notify-group-title">后台保活</div>
+          ${swRow('ice-stat', '开启前台服务保活', 'keepalive', inert)}
+          ${arrowRow('ice-setting', '电池优化白名单')}
+          ${arrowRow('ice-config', '自启动 / 后台运行设置')}
+          ${arrowRow('ice-stat', '保活引导')}
+        </div>`;
+    }
+
+    function morePageHtml() {
+      return `
+        <div class="more-page">
+          <div class="more-page-header"><span class="more-page-back" onclick="setPage('live')"></span><span>设置</span></div>
+          <div class="more-page-body">${moreBodyHtml(false)}</div>
+        </div>`;
+    }
+    function notifyPageHtml() {
+      return `
+        <div class="more-page">
+          <div class="more-page-header"><span class="more-page-back" onclick="setPage('more')"></span><span>通知设置</span></div>
+          <div class="notify-body">${notifyBodyHtml(false)}</div>
+        </div>`;
+    }
+    function consolePageHtml() {
+      return `
+        <div class="more-page">
+          <div class="more-page-header"><span class="more-page-back" onclick="backFromConsole()"></span><span>控制台</span></div>
+          <div class="more-page-body" id="psn-console-list" style="background:var(--bg);font-family:'Menlo','Consolas',monospace;">${logsHtml()}</div>
+        </div>`;
+    }
+    function savePageHtml() {
+      return `
+        <div class="more-page">
+          <div class="more-page-header"><span class="more-page-back" onclick="setPage('more')"></span><span>保存弹幕</span></div>
+          <div class="more-page-body">
+            <div class="modal-card" style="box-shadow:none;border:1px solid var(--bd);margin-top:10px;align-self:center;">
+              <div class="modal-title">保存弹幕</div>
+              <input class="input" value="${saveFileName()}" />
+              <div class="modal-desc">将当前已接收的弹幕、礼物、进入关注记录保存为 JSON 文件。点击保存后弹出系统文件选择器以确认存储位置。</div>
+              <div class="btn-row">
+                <button class="btn secondary" onclick="setPage('more')">取消</button>
+                <button class="btn" onclick="doSave()">保存</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+    function switchPageHtml() {
+      return `
+        <div class="more-page">
+          <div class="more-page-header"><span class="more-page-back" onclick="setPage('more')"></span><span>切换房间号</span></div>
+          <div class="more-page-body">
+            <div class="modal-card" style="box-shadow:none;border:1px solid var(--bd);margin-top:10px;align-self:center;">
+              <div class="modal-title">切换房间号</div>
+              <input class="input" placeholder="房间号 / 直播链接" value="${esc(state.switchInput)}" oninput="setSwitchInput(this.value)" />
+              <div class="modal-desc">输入新的房间号或抖音直播链接，切换后将重新连接直播间。</div>
+              <div class="btn-row">
+                <button class="btn secondary" onclick="setPage('live')">取消</button>
+                <button class="btn" onclick="doSwitch()">切换</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    const PORTRAIT_PAGES = {
+      home: pageHome, confirm: pageConfirm, search: pageSearch, login: pageLogin, webview: pageWebview,
+      live: pageLive, more: morePageHtml, notify: notifyPageHtml, console: consolePageHtml, save: savePageHtml, switch: switchPageHtml
+    };
+    function renderPortrait() {
+      const screen = document.getElementById('sim-portrait-screen');
+      if (screen) screen.innerHTML = (PORTRAIT_PAGES[state.page] || pageHome)();
+    }
+
+    /* ================= 横屏三栏模板（模拟器与横屏平展卡片共用） ================= */
+    function panelCls(tab, o) {
+      return o.interactive && state.connected && state.page === 'live' && state.liveTab === tab ? ' panel-active' : '';
+    }
+
+    function winLayoutHtml(o) {
+      const d = state.liveData;
+      const userCard = o.loggedIn ? `
+            <div class="win-user-card">
+              <div class="win-user-avatar"><i class="ice-keya ice"></i></div>
+              <div class="win-user-info">
+                <div class="win-user-name">九渊菌</div>
+                <div class="win-user-fs">关注 225 | 粉丝 75</div>
+              </div>
+              <div class="win-user-action" title="退出登录"${o.interactive ? ` onclick="logout()"` : ''}>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+              </div>
+            </div>` : `
+            <div class="win-user-card">
+              <div class="win-user-avatar"><i class="ice-keya ice"></i></div>
+              <div class="win-user-info">
+                <div class="win-user-name">未登录</div>
+                <div class="win-user-fs">关注 0 | 粉丝 0</div>
+              </div>
+              <div class="win-user-action" title="登录/更换"${o.interactive ? ` onclick="gotoLogin()"` : ''}>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+              </div>
+            </div>`;
+      const giftBody = (o.loggedIn && o.connected)
+        ? giftItemsHtml()
+        : (o.connected
+          ? `<div class="panel-login-tip">
+              <div class="key-icon"><i class="ice-keya ice"></i></div>
+              <p class="tip-text">登录抖音账号后才可显示礼物信息</p>
+              <button class="btn"${o.interactive ? ` onclick="gotoLogin('gift')"` : ''}>抖音扫码 / 网页登录</button>
+            </div>`
+          : '<div class="cast-empty">暂无消息</div>');
+      return `
+        <div class="win-layout">
+          <div class="win-left">
+            <div class="win-panel${panelCls('data', o)}" style="flex:0 0 auto;">
+              <div class="win-panel-header">
+                <span class="win-panel-dots"><span></span><span></span><span></span></span>
+                <span class="win-panel-title">直播信息</span>
+              </div>
+              <div class="win-panel-body">
+                <div class="cover-box" style="aspect-ratio:16/9;border-radius:4px;margin-bottom:3px;"><img src="https://picsum.photos/seed/dycastcover/400/225" alt="cover" onerror="this.style.display='none';this.parentNode.appendChild(document.createTextNode('暂无封面'))" /></div>
+                <div class="cover-title" style="font-size:9px;margin-bottom:4px;">${esc(d.title)}</div>
+                <div class="small-info"><span class="k">主播</span><span class="v">${esc(d.anchor)}</span></div>
+                <div class="small-info"><span class="k">直播状态</span><span class="v" style="color:${o.connected ? 'var(--theme)' : 'var(--text)'};">${o.connected ? '直播中' : '未连接'}</span></div>
+                <div class="small-info"><span class="k">粉丝数</span><span class="v">${d.fans}</span></div>
+                <div class="small-info"><span class="k">在线观众</span><span class="v">${o.connected ? d.audience : '-'}</span></div>
+              </div>
+            </div>
+            ${userCard}
+            <div class="win-icon-tools">
+              <div class="win-icon-btn ice-stat ice" title="控制台"${o.interactive ? ` onclick="openConsole('live')"` : ''}></div>
+              <div class="win-icon-btn ice-setting ice" title="设置"${o.interactive ? ` onclick="openSettings('live')"` : ''}></div>
+            </div>
+            <div class="win-timer" data-timer>${fmtElapsed(o.connected ? state.elapsed : 0)}</div>
+            <div class="win-status"><div class="win-status-dot ${o.connected ? '' : 'offline'}"></div><span>${o.connected ? '已连接' : '未连接'}</span></div>
+          </div>
+          <div class="win-center">
+            <div class="win-panel${panelCls('chat', o)}" style="flex:1;">
+              <div class="win-panel-header">
+                <span class="win-panel-dots"><span></span><span></span><span></span></span>
+                <span class="win-panel-title">弹幕信息</span>
+              </div>
+              <div class="win-panel-body cast-list" id="ls-chat-list" style="border:none;background:transparent;">${o.connected ? chatItemsHtml() : '<div class="cast-empty">暂无消息</div>'}</div>
+            </div>
+            <div class="win-panel${panelCls('gift', o)}" style="flex:1;">
+              <div class="win-panel-header">
+                <span class="win-panel-dots"><span></span><span></span><span></span></span>
+                <span class="win-panel-title">礼物信息</span>
+              </div>
+              <div class="win-panel-body cast-list" id="ls-gift-list" style="border:none;background:transparent;">${giftBody}</div>
+            </div>
+          </div>
+          <div class="win-right">
+            <div class="win-panel force-light">
+              <div class="win-panel-header">
+                <span class="win-panel-dots"><span></span><span></span><span></span></span>
+                <span class="win-panel-title">房间号 & 直播链接</span>
+              </div>
+              <div class="win-panel-body">
+                <div class="win-input-row">
+                  <input class="input room-link-input" placeholder="房间号 / 直播链接" value="${esc(state.roomInput)}" ${o.interactive ? 'oninput="setRoomInput(this.value)"' : ''} style="flex:1;" />
+                  <button class="btn"${o.interactive ? ' onclick="connectLandscape()"' : ''}>连接</button>
+                </div>
+              </div>
+            </div>
+            <div class="win-panel force-light${panelCls('social', o)}" style="flex:1;">
+              <div class="win-panel-header">
+                <span class="win-panel-dots"><span></span><span></span><span></span></span>
+                <span class="win-panel-title">进入 & 关注 & 粉丝团</span>
+              </div>
+              <div class="ls-social-columns">
+                <div class="ls-social-col">
+                  <div class="ls-social-label">进入</div>
+                  <div class="ls-social-list cast-list" id="ls-social-enter">${o.connected ? socialItemsHtml('enter') : '<div class="cast-empty">暂无</div>'}</div>
+                </div>
+                <div class="ls-social-col">
+                  <div class="ls-social-label">关注</div>
+                  <div class="ls-social-list cast-list" id="ls-social-follow">${o.connected ? socialItemsHtml('follow') : '<div class="cast-empty">暂无</div>'}</div>
+                </div>
+                <div class="ls-social-col">
+                  <div class="ls-social-label">粉丝团</div>
+                  <div class="ls-social-list cast-list" id="ls-social-fans">${o.connected ? socialItemsHtml('fans') : '<div class="cast-empty">暂无</div>'}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function lsHeader(title, backAction, inert) {
+      return `<div class="more-page-header"><span class="more-page-back"${inert ? '' : ` onclick="${backAction}"`}></span><span>${title}</span></div>`;
+    }
+
+    /* ================= 横屏全屏页面（与竖屏同构流程，布局针对横屏优化） ================= */
+    function lsHomePageHtml(inert) {
+      const act = a => inert ? '' : ` onclick="${a}"`;
+      return `
+        <div class="ls-fullpage">
+          <div class="more-page-header"><span>抖音直播弹幕助手</span></div>
+          <div class="ls-home-center">
+            <div class="ls-home-form">
+              <img class="room-form-icon" src="/preview-assets/app-icon.png" alt="应用图标" style="margin:0;" />
+              <h2 class="room-form-title" style="font-size:15px;">连接直播间</h2>
+              <p class="room-form-subtitle" style="text-align:center;">输入房间号和直播链接开始使用</p>
+              <input class="room-form-input" placeholder="房间号 / 直播链接" value="${esc(state.roomInput)}" ${inert ? '' : 'oninput="setRoomInput(this.value)"'} />
+              <button class="btn" style="margin-bottom:0;"${state.roomInput.trim() ? act('goNext()') : ' disabled'}>下一步</button>
+              <button class="btn secondary" style="margin-bottom:0;"${act("setPage('search')")}>搜索主播</button>
+            </div>
+          </div>
+          <div class="ls-home-recent">${recentPillsHtml(inert)}</div>
+        </div>`;
+    }
+
+    function lsConfirmPageHtml(inert, dead) {
+      const d = state.liveData;
+      const act = a => inert ? '' : ` onclick="${a}"`;
+      return `
+        <div class="ls-fullpage">
+          ${lsHeader('确认主播', "setPage('home')", inert)}
+          <div class="ls-two-col" style="align-items:stretch;">
+            <div style="width:300px;display:flex;flex-direction:column;justify-content:center;flex-shrink:0;">
+              <div class="cover-box" style="margin-bottom:4px;"><img src="https://picsum.photos/seed/dycastcover/400/225" alt="cover" onerror="this.style.display='none';this.parentNode.appendChild(document.createTextNode('暂无封面'))" /></div>
+              <div class="cover-title" style="font-size:11px;">${esc(d.title)}</div>
+            </div>
+            <div style="flex:1;max-width:340px;display:flex;flex-direction:column;justify-content:center;min-width:0;">
+              <div class="info-row"><span class="k">主播</span><span class="v">${esc(d.anchor)}</span></div>
+              <div class="info-row"><span class="k">直播状态</span><span class="v">${dead ? '<span style="color:var(--error);font-weight:bold;">未开播</span>' : '<span class="live-badge">直播中</span>'}</span></div>
+              <div class="info-row"><span class="k">主播粉丝数</span><span class="v">${d.fans}</span></div>
+              <div class="info-row"><span class="k">在线观众数</span><span class="v">${dead ? '-' : d.audience}</span></div>
+              <div class="info-row"><span class="k">累计观看人数</span><span class="v">${dead ? '-' : d.totalViews}</span></div>
+              <div class="info-row"><span class="k">本场点赞数</span><span class="v">${dead ? '-' : d.likes}</span></div>
+              <div class="confirm-actions" style="margin-top:10px;">
+                ${dead ? '' : `<button class="btn"${act("gotoLogin('confirm')")}>确认正确，进入下一步</button>`}
+                <button class="btn secondary"${act("setPage('home')")}>返回修改</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function lsSearchPageHtml(inert) {
+      const act = a => inert ? '' : ` onclick="${a}"`;
+      return `
+        <div class="ls-fullpage">
+          ${lsHeader('抖音直播搜索', "setPage('home')", inert)}
+          <div class="ls-full-body" style="padding:10px;">
+            <div class="webview-box" style="flex:1;width:100%;margin-bottom:8px;">抖音直播搜索<br>${state.roomInput.trim() ? '关键词：' + esc(state.roomInput) : '输入关键词后可打开真实抖音搜索'}</div>
+            <div class="webview-toolbar" style="width:100%;">
+              <button class="btn secondary small" style="flex:1;"${act("setPage('home')")}>关闭</button>
+              <button class="btn small" style="flex:1;"${act('openRealSearch()')}>在新标签页搜索</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function lsLoginPageHtml(inert) {
+      const act = a => inert ? '' : ` onclick="${a}"`;
+      return `
+        <div class="ls-fullpage">
+          ${lsHeader('登录抖音账号', 'backFromLogin()', inert)}
+          <div class="ls-full-body" style="justify-content:center;">
+            <div class="key-icon"><i class="ice-keya ice"></i></div>
+            <p class="tip-text">登录抖音账号后才可显示礼物信息</p>
+            <div style="width:260px;display:flex;flex-direction:column;">
+              <button class="btn"${act('openRealLogin()')}>抖音扫码 / 网页登录</button>
+              <div class="skip-row" style="padding-top:6px;"><span class="skip-link"${act('enterLive()')}>跳过，稍后登录</span></div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function lsWebviewPageHtml(inert) {
+      const act = a => inert ? '' : ` onclick="${a}"`;
+      return `
+        <div class="ls-fullpage">
+          ${lsHeader('抖音网页登录', "setPage('login')", inert)}
+          <div class="ls-full-body" style="padding:10px;">
+            <div class="webview-box" style="flex:1;width:100%;margin-bottom:8px;">抖音网页登录<br>需在新标签页完成扫码登录</div>
+            <div class="webview-toolbar" style="width:100%;">
+              <button class="btn secondary small" style="flex:1;"${act("setPage('login')")}>关闭</button>
+              <button class="btn small" style="flex:1;"${act('openRealLogin()')}>打开真实登录页</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    const LS_SETTING_GROUPS = [
+      { key: 'tools', label: '工具', icon: 'ice-stat', items: [
+        ['ice-stat', '控制台', "openConsole('more')"],
+        ['ice-save', '保存弹幕', "setPage('save')"],
+        ['ice-room-id', '切换房间号', "setPage('switch')"]
+      ] },
+      { key: 'notify', label: '通知', icon: 'ice-msg', items: [
+        ['ice-msg', '通知设置', "setPage('notify')"]
+      ] },
+      { key: 'account', label: '账号', icon: 'ice-keya', items: [
+        ['ice-keya', '登录 / 更换账号', "gotoLogin('more')"],
+        ['ice-close', '退出登录', 'logout()'],
+        ['ice-setting', '设置', 'window.showKeepAliveGuide()']
+      ] }
+    ];
+    function lsSettingsPageHtml(inert) {
+      const act = a => inert ? '' : ` onclick="${a}"`;
+      const group = LS_SETTING_GROUPS.find(g => g.key === state.lsSettingsGroup) || LS_SETTING_GROUPS[0];
+      return `
+        <div class="ls-fullpage">
+          ${lsHeader('设置', 'backFromSettings()', inert)}
+          <div class="ls-settings-body">
+            <div class="ls-settings-nav">
+              ${LS_SETTING_GROUPS.map(g => `<div class="ls-settings-nav-item ${g.key === group.key ? 'active' : ''}"${act(`setLsGroup('${g.key}')`)}><span class="notify-icon ${g.icon} ice" style="margin-right:0;"></span><span>${g.label}</span></div>`).join('')}
+            </div>
+            <div class="ls-settings-detail">
+              <div class="more-group" style="max-width:300px;">
+                <div class="more-group-title">${group.label}</div>
+                ${group.items.map(item => `<div class="more-item"${act(item[2])}><span class="icon ${item[0]} ice"></span><span>${item[1]}</span><span class="arrow"></span></div>`).join('')}
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function lsNotifyPageHtml(inert) {
+      return `
+        <div class="ls-fullpage">
+          ${lsHeader('通知设置', "setPage('more')", inert)}
+          <div class="ls-full-body" style="flex-direction:row;flex-wrap:wrap;gap:8px;align-items:flex-start;justify-content:center;">
+            <div class="notify-group" style="flex:1;max-width:250px;padding:0 9px;">
+              ${swRow('ice-setting', '总开关', 'master', inert)}
+              ${swRow('ice-cast', '前台时也推送', 'foreground', inert)}
+              ${swRow('ice-save', '后台时推送', 'background', inert)}
+            </div>
+            <div class="notify-group" style="flex:1;max-width:250px;padding:0 9px;">
+              <div class="notify-group-title">消息类型</div>
+              ${swRow('ice-cast', '弹幕', 'chat', inert)}
+              ${swRow('ice-gift', '礼物', 'gift', inert)}
+              ${swRow('ice-member', '进入', 'enter', inert)}
+              ${swRow('ice-member', '关注', 'follow', inert)}
+              ${swRow('ice-member', '粉丝团', 'fansclub', inert)}
+              ${swRow('ice-config', '点赞', 'like', inert)}
+            </div>
+            <div style="flex:1;max-width:260px;display:flex;flex-direction:column;gap:8px;">
+              <div class="notify-group" style="padding:0 9px;">
+                <div class="notify-group-title">合并设置</div>
+                <div class="notify-row"><span class="notify-icon ice-config ice"></span><span>合并间隔（秒）</span><input class="notify-number" value="${state.notify.merge}" ${inert ? '' : 'onchange="setMerge(this.value)"'} /></div>
+                <div class="notify-hint">0 表示不合并，每条消息单独通知</div>
+              </div>
+              <div class="notify-group" style="padding:0 9px;">
+                <div class="notify-group-title">后台保活</div>
+                ${swRow('ice-stat', '开启前台服务保活', 'keepalive', inert)}
+                ${arrowRow('ice-setting', '电池优化白名单')}
+                ${arrowRow('ice-config', '自启动 / 后台运行设置')}
+                ${arrowRow('ice-stat', '保活引导')}
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function lsConsolePageHtml(inert) {
+      return `
+        <div class="ls-fullpage">
+          ${lsHeader('控制台', 'backFromConsole()', inert)}
+          <div class="ls-full-body" id="ls-console-list" style="background:var(--bg);font-family:'Menlo','Consolas',monospace;align-items:stretch;">${logsHtml()}</div>
+        </div>`;
+    }
+
+    function lsSavePageHtml(inert) {
+      const act = a => inert ? '' : ` onclick="${a}"`;
+      return `
+        <div class="ls-fullpage">
+          ${lsHeader('保存弹幕', "setPage('more')", inert)}
+          <div class="ls-full-body" style="justify-content:center;">
+            <div class="modal-card" style="width:300px;box-shadow:none;border:1px solid var(--bd);">
+              <div class="modal-title">保存弹幕</div>
+              <input class="input" value="${saveFileName()}" />
+              <div class="modal-desc">将当前已接收的弹幕、礼物、进入关注记录保存为 JSON 文件。点击保存后弹出系统文件选择器以确认存储位置。</div>
+              <div class="btn-row">
+                <button class="btn secondary"${act("setPage('more')")}>取消</button>
+                <button class="btn"${act('doSave()')}>保存</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function lsSwitchPageHtml(inert) {
+      const act = a => inert ? '' : ` onclick="${a}"`;
+      return `
+        <div class="ls-fullpage">
+          ${lsHeader('切换房间号', "setPage('more')", inert)}
+          <div class="ls-full-body" style="justify-content:center;">
+            <div class="modal-card" style="width:300px;box-shadow:none;border:1px solid var(--bd);">
+              <div class="modal-title">切换房间号</div>
+              <input class="input" placeholder="房间号 / 直播链接" value="${esc(state.switchInput)}" ${inert ? '' : 'oninput="setSwitchInput(this.value)"'} />
+              <div class="modal-desc">输入新的房间号或抖音直播链接，切换后将重新连接直播间。</div>
+              <div class="btn-row">
+                <button class="btn secondary"${act("setPage('more')")}>取消</button>
+                <button class="btn"${act('doSwitch()')}>切换</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    const LS_PAGES = {
+      home: lsHomePageHtml,
+      confirm: lsConfirmPageHtml,
+      'confirm-dead': (inert) => lsConfirmPageHtml(inert, true),
+      search: lsSearchPageHtml,
+      login: lsLoginPageHtml,
+      webview: lsWebviewPageHtml,
+      more: lsSettingsPageHtml,
+      notify: lsNotifyPageHtml,
+      console: lsConsolePageHtml,
+      save: lsSavePageHtml,
+      switch: lsSwitchPageHtml
+    };
+
+    function renderLandscape() {
+      const screen = document.getElementById('sim-landscape-screen');
+      if (!screen) return;
+      if (state.page === 'live') {
+        // 三栏主界面仅在真实连接流程进入直播间后显示
+        screen.innerHTML = winLayoutHtml({ connected: state.connected, loggedIn: state.isLoggedIn, interactive: true });
+      } else if (state.page === 'confirm') {
+        // 横屏确认页必须与真实接口返回的直播状态一致
+        screen.innerHTML = lsConfirmPageHtml(false, !state.isLiving);
+      } else {
+        screen.innerHTML = (LS_PAGES[state.page] || lsHomePageHtml)(false);
+      }
+    }
+
+    function renderLsCards() {
+      document.querySelectorAll('[data-ls-card]').forEach(el => {
+        const builder = LS_PAGES[el.dataset.lsCard];
+        el.innerHTML = builder ? builder(true) : '';
+      });
+    }
+
+    function updateLiveLists() {
+      const psn = document.getElementById('psn-live-list');
+      if (psn && state.page === 'live') {
+        if (state.liveTab === 'chat') psn.innerHTML = chatItemsHtml();
+        else if (state.liveTab === 'gift' && state.isLoggedIn) psn.innerHTML = giftItemsHtml();
+        else if (state.liveTab === 'social') psn.innerHTML = socialItemsHtml(state.socialFilter);
+      }
+      const lc = document.getElementById('ls-chat-list');
+      if (lc && state.connected) lc.innerHTML = chatItemsHtml();
+      const lg = document.getElementById('ls-gift-list');
+      if (lg && state.connected && state.isLoggedIn) lg.innerHTML = giftItemsHtml();
+      const ls = document.getElementById('ls-social-list');
+      if (ls && state.connected) ls.innerHTML = socialItemsHtml('all');
+      const pc = document.getElementById('psn-console-list');
+      if (pc) pc.innerHTML = logsHtml();
+      const lslog = document.getElementById('ls-console-list');
+      if (lslog) lslog.innerHTML = logsHtml();
+    }
+
+    /* ================= 交互动作（spec §4 联动规则） ================= */
+    function render() {
+      renderPortrait();
+      renderLandscape();
+      const logEl = document.getElementById('real-connection-log-list');
+      if (logEl) {
+        logEl.innerHTML = state.logs.length
+          ? state.logs.map(l => `<div class="console-log ${l.cls}"><span class="time">${l.t}</span><span class="tag">[${l.tag}]</span>${l.text}</div>`).join('')
+          : '<div class="cast-empty">等待真实连接……</div>';
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+    }
+    function setPage(p) { state.page = p; render(); }
+    function setRoomInput(v) {
+      state.roomInput = v;
+      // 同步竖屏与横屏首页「下一步」的可用态（不整体重绘，避免打断输入）
+      document.querySelectorAll('#simulator .room-form .btn').forEach(b => {
+        if (!b.classList.contains('secondary')) b.disabled = !v.trim();
+      });
+    }
+    function goNext() {
+      const input = state.roomInput.trim();
+      if (!input) return;
+      state.page = /^\d{5,}$/.test(input) ? 'confirm' : 'search';
+      render();
+    }
+    function connectLandscape() { setPage('confirm'); }
+    function fillRoom(num) { state.roomInput = num; render(); }
+    function setLiveTab(t) { state.liveTab = t; render(); }
+    function setSocialFilter(f) { state.socialFilter = f; render(); }
+    function toggleNotify(k) { state.notify[k] = !state.notify[k]; render(); }
+    function setMerge(v) { state.notify.merge = parseInt(v || '0', 10) || 0; }
+    function setSwitchInput(v) { state.switchInput = v; }
+    function gotoLogin(from) { state.loginBack = from || (state.connected ? 'live' : 'confirm'); state.page = 'login'; render(); }
+    function backFromLogin() { const b = state.loginBack; setPage(b === 'gift' ? 'live' : b); }
+    function openConsole(from) { state.consoleBack = from; setPage('console'); }
+    function backFromConsole() { setPage(state.consoleBack || 'more'); }
+    function openSettings(from) { state.moreBack = from; state.lsSettingsGroup = 'tools'; setPage('more'); }
+    function backFromSettings() { setPage(state.moreBack || 'live'); }
+    function setLsGroup(g) { state.lsSettingsGroup = g; render(); }
+    function finishLogin() {
+      state.isLoggedIn = true;
+      pushLog('登录', 'success', '抖音账号登录成功（sessionid 已同步代理）');
+      if (state.loginBack === 'gift') { state.page = 'live'; state.liveTab = 'gift'; }
+      else if (state.loginBack === 'more') { state.page = 'more'; }
+      else { state.page = 'live'; state.connected = true; state.liveTab = 'chat'; }
+      render();
+    }
+    function enterLive() {
+      state.connected = true;
+      state.page = 'live';
+      state.liveTab = 'chat';
+      pushLog('连接', 'info', '正在连接： ' + state.roomNum);
+      pushLog('连接', 'success', '房间连接成功： ' + state.roomNum);
+      render();
+    }
+    function leaveLive() { state.connected = false; state.page = 'home'; state.elapsed = 0; render(); }
+    function logout() { state.isLoggedIn = false; pushLog('账号', 'info', '已退出登录'); render(); }
+    function doSave() { pushLog('保存', 'success', '已保存 ' + saveFileName()); setPage('more'); }
+    function doSwitch() {
+      const v = state.switchInput.trim();
+      if (!v) return;
+      if (/^\d{5,}$/.test(v)) state.roomNum = v;
+      pushLog('连接', 'info', '正在连接： ' + state.roomNum);
+      pushLog('连接', 'success', '房间连接成功： ' + state.roomNum);
+      state.connected = true;
+      state.page = 'live';
+      render();
+    }
+
+    /* ================= 初始化 ================= */
+    renderPortrait();
+    renderLandscape();
+    renderLsCards();
+
+    // 计时器：仅更新文本节点，不整体重绘
+    setInterval(() => {
+      if (state.connected) state.elapsed++;
+      document.querySelectorAll('[data-timer]').forEach(el => { el.textContent = fmtElapsed(state.connected ? state.elapsed : 0); });
+      const el = document.getElementById('psn-elapsed');
+      if (el) el.textContent = fmtElapsed(state.elapsed);
+    }, 1000);
+
+    // 模拟消息流（演示用，与真机消息节奏一致；不触碰输入焦点）
+    setInterval(() => {
+      if (window.__previewRealMode || !state.connected) return;
+      const r = Math.random();
+      if (r < 0.6) {
+        const user = CHAT_USERS[Math.floor(Math.random() * CHAT_USERS.length)];
+        const msg = CHAT_POOL[Math.floor(Math.random() * CHAT_POOL.length)];
+        state.messages.chat.push({ user, msg });
+        if (state.messages.chat.length > 24) state.messages.chat.shift();
+      } else if (r < 0.82) {
+        const g = GIFT_POOL[Math.floor(Math.random() * GIFT_POOL.length)];
+        const user = '粉丝' + 'ABCDEFGH'[Math.floor(Math.random() * 8)];
+        state.messages.gift.push({ user, name: g.name, icon: g.icon, amount: 1 + Math.floor(Math.random() * 99) });
+        if (state.messages.gift.length > 14) state.messages.gift.shift();
+      } else {
+        const s = SOCIAL_POOL[Math.floor(Math.random() * SOCIAL_POOL.length)];
+        const user = CHAT_USERS[Math.floor(Math.random() * CHAT_USERS.length)];
+        state.messages.social.push({ user, type: s.type, text: s.text });
+        if (state.messages.social.length > 16) state.messages.social.shift();
+      }
+      if (Math.random() < 0.25) pushLog('消息', 'info', '收到弹幕消息 ' + (1 + Math.floor(Math.random() * 5)) + ' 条');
+      updateLiveLists();
+    }, 2600);
+  </script>
+  <script>(() => {
+  const runtime = window.DyCastPreviewRuntime;
+  if (!runtime) return;
+  const state = window.__previewState;
+  if (!state) return;
+
+  window.__previewRealMode = true;
+
+  // 真实模式：彻底清空静态演示数据，避免把虚拟状态混入真实页面。
+  state.logs = [];
+  state.messages = { chat: [], gift: [], social: [] };
+  state.recentRooms = [];
+
+  let client;
+  let timer;
+
+  const addLog = (tag, cls, text) => {
+    state.logs.push({ t: new Date().toTimeString().slice(0, 8), tag, cls, text });
+    if (state.logs.length > 200) state.logs.shift();
+    if (typeof window.render === 'function') window.render();
+  };
+
+  const resetMessages = () => {
+    state.messages.chat = [];
+    state.messages.gift = [];
+    state.messages.social = [];
+  };
+
+  const updateInfo = info => {
+    if (!info) return;
+    state.liveData.anchor = info.nickname || '-';
+    state.liveData.title = info.title || '直播间';
+    state.liveData.cover = info.cover || '';
+    state.isLiving = info.status === runtime.RoomStatus.LIVING;
+  };
+
+  const messageUser = msg => msg.user?.name || '未知用户';
+
+  const pushMessage = msg => {
+    const user = messageUser(msg);
+    // 主播/观众/粉丝等数据随真实消息实时更新
+    if (msg.room) {
+      const r = msg.room;
+      if (r.audienceCount !== undefined) state.liveData.audience = String(r.audienceCount);
+      if (r.followCount !== undefined) state.liveData.fans = String(r.followCount);
+      if (r.likeCount !== undefined) state.liveData.likes = String(r.likeCount);
+      if (r.totalUserCount !== undefined) state.liveData.totalViews = String(r.totalUserCount);
+    }
+    if (msg.method === runtime.CastMethod.CHAT || msg.method === runtime.CastMethod.EMOJI_CHAT) {
+      state.messages.chat.push({ user, msg: msg.content || '' });
+    } else if (msg.method === runtime.CastMethod.GIFT) {
+      state.messages.gift.push({ user, name: msg.gift?.name || '礼物', icon: msg.gift?.icon || '', amount: msg.gift?.count || 1 });
+    } else if (msg.method === runtime.CastMethod.MEMBER) {
+      state.messages.social.push({ user, type: 'enter', text: '进入直播间' });
+    } else if (msg.method === runtime.CastMethod.SOCIAL) {
+      state.messages.social.push({ user, type: 'follow', text: '关注了主播' });
+    } else if (msg.method === runtime.CastMethod.FANSCLUB) {
+      state.messages.social.push({ user, type: 'fans', text: '加入了粉丝团' });
+    } else if (msg.method === runtime.CastMethod.LIKE) {
+      const content = String(msg.content || '1');
+      const likeText = content.includes('点赞') ? content : `为主播点赞了(${content})`;
+      state.messages.social.push({ user, type: 'like', text: likeText });
+    }
+    for (const key of ['chat', 'gift', 'social']) if (state.messages[key].length > 200) state.messages[key].shift();
+  };
+
+  const parseRoom = async raw => {
+    let room = runtime.extractRoomNum(raw);
+    if (room) return room;
+    const clean = runtime.extractDouyinUrlFromText(raw);
+    if (/v\.douyin\.com\//i.test(clean)) {
+      addLog('解析', 'info', `正在解析短链接: ${clean}`);
+      try {
+        const resolved = await runtime.resolveShortUrl(clean);
+        addLog('解析', 'success', `短链接落地: ${resolved}`);
+        room = runtime.extractRoomNum(resolved);
+      } catch (err) {
+        addLog('解析', 'error', `短链接解析失败: ${err?.message || err}`);
+      }
+    }
+    return room;
+  };
+
+  const stop = () => {
+    if (timer) clearInterval(timer);
+    timer = undefined;
+    if (client) client.close(1000, '用户断开');
+    client = undefined;
+    state.connected = false;
+  };
+
+  // 搜索：真实抖音搜索页（新标签页可操控；抖音页面禁止 iframe 内嵌，故用新标签打开）
+  window.openRealSearch = () => {
+    const q = state.roomInput.trim();
+    const url = `https://www.douyin.com/search/${encodeURIComponent(q)}`;
+    addLog('搜索', 'info', `打开真实抖音搜索: ${url}`);
+    window.open(url, '_blank');
+  };
+
+  // 登录：真实抖音登录页（新标签页可操控）
+  window.openRealLogin = () => {
+    const url = 'https://www.douyin.com/';
+    addLog('登录', 'info', `打开真实抖音登录: ${url}`);
+    window.open(url, '_blank');
+  };
+
+  window.disconnectReal = () => { stop(); addLog('连接', 'info', '已断开连接'); state.page = 'home'; window.render(); };
+  window.leaveLive = window.disconnectReal;
+
+  window.goNext = async () => {
+    const raw = state.roomInput.trim();
+    if (!raw) return;
+    stop();
+    state.page = 'home';
+    window.render();
+    try {
+      addLog('解析', 'info', `正在解析输入: ${raw}`);
+      const room = await parseRoom(raw);
+      if (!room) {
+        state.page = 'search';
+        addLog('解析', 'error', '无法识别房间号，请检查输入（支持房间号、直播链接或分享文案短链）');
+        window.render();
+        return;
+      }
+      state.roomNum = room;
+      state.roomInput = room;
+      addLog('房间信息', 'info', `正在获取房间信息: ${room}`);
+      const info = await runtime.getLiveInfo(room);
+      updateInfo(info);
+      addLog('房间信息', 'success', `主播 ${state.liveData.anchor} · ${state.isLiving ? '直播中' : '未开播'}`);
+      state.page = 'confirm';
+      window.render();
+    } catch (err) {
+      state.page = 'home';
+      addLog('连接', 'error', `获取房间信息失败: ${err?.message || err}`);
+      window.render();
+    }
+  };
+
+  window.enterLive = () => {
+    if (!state.roomNum) return;
+    if (!state.isLiving) {
+      addLog('连接', 'warning', '房间未开播，无法进入直播间');
+      state.page = 'confirm';
+      window.render();
+      return;
+    }
+    state.page = 'live';
+    state.connected = false;
+    state.elapsed = 0;
+    resetMessages();
+    addLog('连接', 'info', `正在连接弹幕: ${state.roomNum}`);
+    window.render();
+
+    client = new runtime.DyCast(state.roomNum);
+    client.on('open', (_event, info) => {
+      updateInfo(info);
+      state.connected = true;
+      state.elapsed = 0;
+      timer = setInterval(() => { state.elapsed++; if (typeof refreshLiveUI === 'function') refreshLiveUI(); }, 1000);
+      addLog('WebSocket', 'success', '真实弹幕连接成功');
+    });
+    client.on('message', msgs => {
+      msgs.forEach(pushMessage);
+      addLog('消息', 'info', `收到真实消息 ${msgs.length} 条`);
+    });
+    client.on('reconnecting', count => addLog('重连', 'warning', `正在重连（第 ${count} 次）`));
+    client.on('reconnect', () => addLog('重连', 'success', 'WebSocket 重连成功'));
+    client.on('error', err => {
+      state.connected = false;
+      addLog('错误', 'error', `WebSocket 错误: ${err?.message || '连接异常'}`);
+    });
+    client.on('close', (code, reason) => {
+      if (timer) { clearInterval(timer); timer = undefined; }
+      state.connected = false;
+      const reasonText =
+        code === runtime.DyCastCloseCode.LIVE_END ? '直播未开播或已结束'
+        : code === runtime.DyCastCloseCode.CONNECTING_ERROR ? '连接过程出错，请确认房间与网络'
+        : `连接关闭: ${reason || code}`;
+      addLog('连接', 'warning', reasonText);
+    });
+    client.connect().catch(err => addLog('连接', 'error', `连接失败: ${err?.message || err}`));
+  };
+
+  // 保活引导（可复用；首次打开自动展示一次，设置页“设置”入口可再次打开）
+  window.showKeepAliveGuide = () => {
+    const make = () => {
+      const overlay = document.createElement('div');
+      overlay.id = 'preview-onboarding';
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;';
+      overlay.innerHTML = `<div style="max-width:340px;width:90%;background:#fff;color:#1e2732;border-radius:12px;padding:22px;box-shadow:0 12px 40px rgba(0,0,0,.3);font-size:13px;line-height:1.6;">
+        <h3 style="margin:0 0 10px;font-size:16px;">保持后台运行</h3>
+        <p>为持续接收弹幕与礼物通知，请为「抖音直播弹幕助手」开启以下权限：</p>
+        <ul style="margin:0 0 14px;padding-left:18px;">
+          <li>加入电池优化白名单</li>
+          <li>开启自启动 / 后台运行权限</li>
+          <li>允许通知权限</li>
+        </ul>
+        <button id="preview-onboard-enter" style="width:100%;padding:10px;border:0;border-radius:7px;background:#68be8d;color:#fff;font-size:14px;font-weight:700;cursor:pointer;">进入</button>
+      </div>`;
+      overlay.querySelector('#preview-onboard-enter').addEventListener('click', () => {
+        overlay.remove();
+        try { localStorage.setItem('dycast_preview_onboarded', '1'); } catch {}
+      });
+      document.body.appendChild(overlay);
+    };
+    if (document.body) make();
+    else window.addEventListener('DOMContentLoaded', make, { once: true });
+  };
+
+  // 首次打开：先走一遍保活引导，再进入。
+  (function onboarding() {
+    try { if (localStorage.getItem('dycast_preview_onboarded')) return; } catch { return; }
+    window.showKeepAliveGuide();
+  })();
+
+  // 每秒刷新统计数据与计时（不整体重绘，避免打断滚动）
+  const fmtElapsed = s => {
+    const h = String(Math.floor(s / 3600)).padStart(2, '0');
+    const m = String(Math.floor(s % 3600 / 60)).padStart(2, '0');
+    const sec = String(s % 60).padStart(2, '0');
+    return `${h}:${m}:${sec}`;
+  };
+  const refreshLiveUI = () => {
+    document.querySelectorAll('[data-elapsed]').forEach(el => { el.textContent = fmtElapsed(state.elapsed); });
+    const statMap = {
+      'data-audience': state.liveData.audience,
+      'data-fans': state.liveData.fans,
+      'data-likes': state.liveData.likes,
+      'data-totalviews': state.liveData.totalViews
+    };
+    document.querySelectorAll('[data-stat]').forEach(el => {
+      const key = el.getAttribute('data-stat');
+      if (key in statMap) el.textContent = statMap[key] == null || statMap[key] === '' ? '-' : statMap[key];
+    });
+  };
+
+  // 自动滚动到最新：手动上滑后保留位置
+  const scrollPos = {};
+  const LIVE_LIST_IDS = ['psn-live-list', 'ls-chat-list', 'ls-gift-list', 'ls-social-enter', 'ls-social-follow', 'ls-social-fans', 'real-connection-log-list'];
+  document.addEventListener('scroll', e => {
+    const el = e.target;
+    if (!el || !LIVE_LIST_IDS.includes(el.id)) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
+    scrollPos[el.id] = { top: el.scrollTop, userAtBottom: nearBottom };
+  }, true);
+
+  const afterRenderScroll = () => {
+    LIVE_LIST_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const prev = scrollPos[id];
+      if (prev && !prev.userAtBottom) el.scrollTop = prev.top;
+      else el.scrollTop = el.scrollHeight;
+    });
+  };
+
+  // 包装 render：每次重绘后按滚动策略归位
+  const origRender = window.render;
+  window.render = function () {
+    if (typeof origRender === 'function') origRender();
+    requestAnimationFrame(afterRenderScroll);
+  };
+
+  if (typeof window.render === 'function') window.render();
+})();
+</script>
+</body>
+</html>

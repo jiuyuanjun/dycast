@@ -1,0 +1,82 @@
+// 移动端/安卓自适应样式
+// 竖屏（手机模式）与横屏（平板模式）布局切换，仅在 html.is-android 时生效
+
+// 安卓平台标记
+html.is-android {
+  // 移动端触摸优化
+  * {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+
+  // 允许输入框选择
+  input,
+  textarea {
+    user-select: text;
+  }
+}
+
+// 竖屏手机模式 - 单栏布局
+@media screen and (orientation: portrait) and (max-width: 600px) {
+  html.is-android body {
+    // 主容器改为纵向
+    .index-view {
+      flex-direction: column !important;
+    }
+
+    // 左面板变为顶部栏
+    .view-left {
+      width: 100% !important;
+      max-height: 200px;
+      overflow-y: auto;
+      flex-shrink: 0;
+      border-right: none !important;
+    }
+
+    // 右面板变为底部 Tab
+    .view-right {
+      width: 100% !important;
+      max-height: 240px;
+      flex-shrink: 0;
+      border-left: none !important;
+    }
+
+    // 中间弹幕区域占满
+    .view-center {
+      flex: 1 !important;
+      min-height: 0;
+    }
+  }
+}
+
+// 横屏平板模式 - 保持三栏，但缩小面板宽度
+@media screen and (orientation: landscape) and (max-width: 1024px) {
+  html.is-android body {
+    .view-left {
+      width: 180px !important;
+    }
+    .view-right {
+      width: 180px !important;
+    }
+  }
+}
+
+// 安全区避让 - 刘海/打孔屏/底部手势条
+html.is-android {
+  // 竖屏：顶部留出刘海空间，底部留出手势导航条
+  @media screen and (orientation: portrait) {
+    body {
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+  }
+
+  // 横屏：左侧/右侧留出打孔摄像头空间
+  @media screen and (orientation: landscape) {
+    body {
+      padding-left: env(safe-area-inset-left, 0px);
+      padding-right: env(safe-area-inset-right, 0px);
+    }
+  }
+}

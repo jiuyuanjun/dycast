@@ -1,0 +1,2113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DyCast 前端原型</title>
+  <style>
+    :root {
+      --bg: #f7f6f5;
+      --bd: #b2bfc3;
+      --theme: #68be8d;
+      --tool: #8b968d;
+      --gold: #e6b422;
+      --title: #1e2732;
+      --text: #6b798e;
+      --tip: #9aa7b1;
+      --loading-bg: #eae5e3;
+      --error: #e94829;
+      --white: #ffffff;
+      --nav-active-bg: rgba(104, 190, 141, 0.12);
+      --link: #2d7dca;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1d21;
+        --bd: #3a3f47;
+        --theme: #68be8d;
+        --tool: #8b968d;
+        --gold: #e6b422;
+        --title: #e8eaed;
+        --text: #a8adb5;
+        --tip: #6d737c;
+        --loading-bg: #2c3036;
+        --error: #ff6b53;
+        --white: #24282e;
+        --nav-active-bg: rgba(104, 190, 141, 0.18);
+        --link: #6aa8ff;
+      }
+      body { background: #121418; }
+    }
+    html.force-dark :root,
+    html.force-dark {
+      --bg: #1a1d21;
+      --bd: #3a3f47;
+      --theme: #68be8d;
+      --tool: #8b968d;
+      --gold: #e6b422;
+      --title: #e8eaed;
+      --text: #a8adb5;
+      --tip: #6d737c;
+      --loading-bg: #2c3036;
+      --error: #ff6b53;
+      --white: #24282e;
+      --nav-active-bg: rgba(104, 190, 141, 0.18);
+      --link: #6aa8ff;
+    }
+    html.force-dark body { background: #121418; }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #eef1f3;
+      color: var(--title);
+      padding: 16px;
+      min-height: 100vh;
+    }
+
+    @font-face {
+      font-family: "castfont";
+      src: url("./Android/src/assets/font/castfont.ttf") format("truetype");
+    }
+    .ice { font-family: "castfont"; font-style: normal; -webkit-font-smoothing: antialiased; }
+    .ice-arrow-left:before { content: "\e77d"; }
+    .ice-arrow-right:before { content: "\e77e"; }
+    .ice-setting:before { content: "\e771"; }
+    .ice-cast:before { content: "\e601"; }
+    .ice-gift:before { content: "\e651"; }
+    .ice-member:before { content: "\e657"; }
+    .ice-data:before { content: "\e6da"; }
+    .ice-keya:before { content: "\e6b4"; }
+    .ice-douyin:before { content: "\e667"; }
+    .ice-close:before { content: "\e69a"; }
+    .ice-save:before { content: "\e636"; }
+    .ice-stat:before { content: "\e620"; }
+    .ice-config:before { content: "\e618"; }
+    .ice-room-id:before { content: "\e622"; }
+    .ice-msg:before { content: "\e61f"; }
+
+    .top-bar {
+      max-width: 1400px;
+      margin: 0 auto 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .top-bar h1 { font-size: 18px; font-weight: 700; }
+    .top-bar p { font-size: 11px; color: var(--text); margin-top: 3px; }
+    .theme-toggle {
+      padding: 6px 12px;
+      border: 1px solid var(--bd);
+      border-radius: 16px;
+      background: var(--white);
+      color: var(--title);
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .workspace {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      justify-content: center;
+    }
+
+    .device-wrap { display: flex; flex-direction: column; align-items: center; }
+    .device-label {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text);
+      text-align: center;
+    }
+
+    .device {
+      width: 230px;
+      height: 480px;
+      background: var(--bg);
+      border: 7px solid #2a2a2a;
+      border-radius: 26px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.17);
+      display: flex;
+      flex-direction: column;
+    }
+    .device.landscape {
+      width: 720px;
+      height: 440px;
+    }
+    .notch {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 94px;
+      height: 20px;
+      background: #2a2a2a;
+      border-bottom-left-radius: 8px;
+      border-bottom-right-radius: 8px;
+      z-index: 10;
+    }
+    .device.landscape .notch {
+      left: 16px;
+      transform: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 0 0 8px 8px;
+    }
+    .screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding-top: 32px;
+      position: relative;
+    }
+    .device.landscape .screen { padding-top: 16px; }
+
+    .header {
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--white);
+      border-bottom: 1px solid var(--bd);
+      font-weight: bold;
+      font-size: 12px;
+      color: var(--title);
+      flex-shrink: 0;
+      position: relative;
+    }
+    .header .app-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      margin-right: 5px;
+    }
+    .header .back, .header .settings, .header .close {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--tool);
+      font-size: 15px;
+      cursor: pointer;
+    }
+    .header .back { left: 2px; }
+    .header .settings { right: 2px; }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .label {
+      font-size: 11px;
+      color: var(--text);
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    .input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      background: var(--white);
+      font-size: 11px;
+      outline: none;
+      margin-bottom: 8px;
+      color: var(--title);
+    }
+    .input::placeholder { color: var(--tip); }
+    .btn {
+      width: 100%;
+      padding: 8px;
+      border: none;
+      border-radius: 6px;
+      background: var(--theme);
+      color: var(--white);
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 6px;
+    }
+    .btn.secondary {
+      background: var(--white);
+      color: var(--text);
+      border: 1px solid var(--bd);
+    }
+    .btn.danger {
+      background: var(--error);
+      color: #fff;
+    }
+    .btn.small {
+      padding: 5px 8px;
+      font-size: 10px;
+      margin-bottom: 0;
+    }
+    .btn-row {
+      display: flex;
+      gap: 6px;
+    }
+    .btn-row .btn { flex: 1; margin-bottom: 0; }
+    .link-btn {
+      background: none;
+      border: none;
+      color: var(--link);
+      font-size: 11px;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    .hint { font-size: 9px; color: var(--tip); line-height: 1.5; }
+
+    /* Page: Home */
+    .room-form {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      gap: 10px;
+    }
+    .room-form-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 8px;
+      margin-bottom: 6px;
+    }
+    .room-form-title {
+      font-size: 17px;
+      font-weight: bold;
+      color: var(--title);
+    }
+    .room-form-subtitle {
+      font-size: 10px;
+      color: var(--text);
+      text-align: center;
+      line-height: 1.5;
+    }
+    .room-form-input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      background: var(--white);
+      font-size: 11px;
+      outline: none;
+      color: var(--title);
+    }
+    .room-form-input::placeholder { color: var(--tip); }
+    .room-form-example {
+      width: 100%;
+      font-size: 9px;
+      color: var(--tip);
+      line-height: 1.5;
+      margin: 0;
+      padding: 0 2px;
+      text-align: center;
+    }
+    .room-form-example span { text-decoration: underline; }
+    .recent-section { width: 100%; margin-top: auto; padding-top: 14px; }
+    .recent-title {
+      font-size: 10px;
+      color: var(--tip);
+      margin-bottom: 6px;
+      text-align: center;
+    }
+    .recent-tags {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .recent-tag {
+      padding: 5px 10px;
+      border-radius: 12px;
+      background: var(--white);
+      border: 1px solid var(--bd);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .recent-tag .name { font-size: 11px; font-weight: bold; color: var(--title); }
+    .recent-tag .id { font-size: 9px; color: var(--tip); }
+    .recent-tags-vertical {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .recent-tags-horizontal {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    /* Page: Confirm */
+    .cover-box {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: var(--loading-bg);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--tip);
+      font-size: 11px;
+      margin-bottom: 6px;
+      overflow: hidden;
+    }
+    .cover-box img { width: 100%; height: 100%; object-fit: cover; }
+    .cover-title {
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 8px;
+      color: var(--title);
+      font-size: 12px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(178, 191, 195, 0.4);
+      font-size: 11px;
+    }
+    .info-row .k { font-weight: bold; color: var(--title); }
+    .info-row .v { color: var(--text); }
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      color: var(--theme);
+      font-weight: bold;
+      font-size: 11px;
+    }
+    .live-badge::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--theme);
+    }
+    .confirm-actions {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .confirm-toolbar {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .confirm-toolbar .btn { flex: 1; margin-bottom: 0; }
+
+    /* Cast list */
+    .cast-list {
+      flex: 1;
+      background: var(--white);
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      padding: 6px;
+      overflow-y: auto;
+    }
+    .cast-item {
+      padding: 3px 0;
+      font-size: 10px;
+      border-bottom: 1px solid rgba(178,191,195,0.25);
+      line-height: 1.4;
+    }
+    .cast-item:last-child { border-bottom: none; }
+    .cast-item .time { color: var(--tip); margin-right: 4px; }
+    .cast-item .user { color: var(--theme); font-weight: bold; }
+    .cast-item .msg { color: var(--title); }
+    .cast-item .level { color: var(--tip); font-size: 9px; margin-right: 3px; }
+    .cast-item .social-tag { color: var(--link); font-size: 9px; }
+    .cast-item .gift-text { color: #eba825; }
+    .cast-item .gift-icon { width: 14px; height: 14px; vertical-align: middle; margin: 0 2px; object-fit: contain; }
+    .cast-item .gift-amount { color: var(--gold); font-weight: bold; font-size: 11px; }
+    .cast-empty {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--tip);
+      font-size: 10px;
+    }
+
+    /* Bottom nav */
+    .bottom-nav {
+      height: 46px;
+      background: var(--white);
+      border-top: 1px solid var(--bd);
+      display: flex;
+      flex-shrink: 0;
+    }
+    .nav-item {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      font-size: 8px;
+      color: var(--tool);
+      cursor: pointer;
+      white-space: nowrap;
+      padding: 0 1px;
+    }
+    .nav-item.active { color: var(--theme); background: var(--nav-active-bg); }
+    .nav-icon {
+      width: 17px;
+      height: 17px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: var(--tool);
+      opacity: 0.85;
+    }
+    .nav-item.active .nav-icon { color: var(--theme); opacity: 1; }
+
+    /* Session */
+    .session-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px;
+      margin-bottom: 6px;
+      border-radius: 8px;
+      background: var(--white);
+      border: 1px solid var(--bd);
+    }
+    .session-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--loading-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: var(--theme);
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .session-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .session-info { flex: 1; min-width: 0; }
+    .session-title {
+      font-size: 11px;
+      font-weight: bold;
+      color: var(--title);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .session-value {
+      font-size: 9px;
+      color: var(--text);
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .session-action {
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      background: var(--bg);
+      border: 1px solid var(--bd);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--tool);
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .session-action svg { width: 14px; height: 14px; fill: currentColor; }
+
+    /* Login */
+    .key-icon {
+      width: 46px;
+      height: 46px;
+      background: var(--white);
+      border: 2px solid var(--theme);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: var(--theme);
+    }
+    .tip-text {
+      text-align: center;
+      color: var(--text);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    .skip-row {
+      text-align: center;
+      margin-top: auto;
+      padding-top: 10px;
+    }
+    .skip-link {
+      color: var(--tip);
+      font-size: 10px;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .webview-box {
+      flex: 1;
+      background: var(--loading-bg);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--tip);
+      font-size: 11px;
+      text-align: center;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .webview-toolbar {
+      display: flex;
+      gap: 6px;
+    }
+    .webview-toolbar .btn { flex: 1; margin-bottom: 0; }
+    .login-fullscreen {
+      position: absolute;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+    }
+
+    /* More / Settings */
+    .more-page {
+      position: absolute;
+      inset: 0;
+      padding-top: 32px;
+      background: var(--bg);
+      z-index: 35;
+      display: flex;
+      flex-direction: column;
+    }
+    .more-page-header {
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--white);
+      border-bottom: 1px solid var(--bd);
+      font-size: 12px;
+      font-weight: bold;
+      color: var(--title);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .more-page-back {
+      position: absolute;
+      left: 8px;
+      font-size: 15px;
+      color: var(--tool);
+    }
+    .more-page-back:before { content: "\e77d"; }
+    .more-page-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .more-group {
+      background: var(--white);
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .more-group-title {
+      padding: 4px 8px;
+      font-size: 10px;
+      color: var(--tip);
+      border-bottom: 1px solid var(--bd);
+    }
+    .more-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      font-size: 11px;
+      color: var(--title);
+      border-bottom: 1px solid rgba(178,191,195,0.3);
+      cursor: pointer;
+    }
+    .more-item:last-child { border-bottom: none; }
+    .more-item .icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      background: var(--bg);
+      border: 1px solid var(--bd);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--theme);
+    }
+    .more-item .arrow { margin-left: auto; color: var(--tip); font-size: 12px; }
+    .more-item .arrow:before { content: "\e77e"; }
+    .more-item .value { margin-left: auto; color: var(--tip); font-size: 10px; }
+
+    /* Notification settings */
+    .notify-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .notify-group {
+      background: var(--white);
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      padding: 0 8px;
+    }
+    .notify-group-title {
+      font-size: 10px;
+      color: var(--text);
+      padding: 4px 0 3px;
+      border-bottom: 1px solid var(--bd);
+    }
+    .notify-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 30px;
+      padding: 5px 0;
+      font-size: 11px;
+      color: var(--title);
+      border-bottom: 1px solid var(--bd);
+    }
+    .notify-row:last-child { border-bottom: none; }
+    .notify-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      background: var(--bg);
+      border: 1px solid var(--bd);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--theme);
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+    .notify-row span:nth-child(2) { flex: 1; }
+    .switch {
+      width: 40px;
+      height: 22px;
+      border-radius: 11px;
+      background: var(--text);
+      position: relative;
+      transition: background 0.2s ease;
+      flex-shrink: 0;
+      margin-left: auto;
+    }
+    .switch.on { background: var(--theme); }
+    .switch-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      transition: transform 0.2s ease;
+    }
+    .switch.on .switch-thumb { transform: translateX(18px); }
+    .notify-number {
+      width: 48px;
+      height: 24px;
+      border: 1px solid var(--bd);
+      border-radius: 4px;
+      text-align: center;
+      background: var(--bg);
+      color: var(--title);
+      font-size: 11px;
+    }
+    .notify-hint {
+      font-size: 9px;
+      color: var(--text);
+      padding: 4px 0 8px;
+    }
+    .notify-arrow {
+      width: 7px;
+      height: 7px;
+      border-top: 2px solid var(--text);
+      border-right: 2px solid var(--text);
+      transform: rotate(45deg);
+      flex-shrink: 0;
+    }
+
+    /* Modal card */
+    .modal-card {
+      width: 100%;
+      max-width: 260px;
+      background: var(--white);
+      border-radius: 8px;
+      padding: 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .modal-title {
+      font-size: 13px;
+      font-weight: bold;
+      color: var(--title);
+      text-align: center;
+    }
+    .modal-card .input { margin-bottom: 0; }
+    .modal-desc {
+      font-size: 9px;
+      color: var(--tip);
+      line-height: 1.4;
+    }
+
+    /* Search */
+    .search-result-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      background: var(--white);
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      margin-bottom: 6px;
+      cursor: pointer;
+    }
+    .search-result-item .cover {
+      width: 44px;
+      height: 44px;
+      border-radius: 6px;
+      background: var(--loading-bg);
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .search-result-item .cover img { width: 100%; height: 100%; object-fit: cover; }
+    .search-result-item .meta { flex: 1; min-width: 0; }
+    .search-result-item .title { font-size: 11px; font-weight: bold; color: var(--title); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .search-result-item .desc { font-size: 9px; color: var(--text); margin-top: 2px; }
+    .search-result-item .status { font-size: 9px; color: var(--theme); margin-top: 2px; }
+    .search-result-item .arrow { color: var(--tip); font-size: 12px; }
+
+    /* Session overlay */
+    .session-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(247,246,245,0.92);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--tip);
+      font-size: 10px;
+      text-align: center;
+      padding: 16px;
+      gap: 6px;
+      border-radius: 6px;
+    }
+    @media (prefers-color-scheme: dark) {
+      .session-overlay { background: rgba(26,29,33,0.92); color: var(--text); }
+    }
+    html.force-dark .session-overlay { background: rgba(26,29,33,0.92); color: var(--text); }
+    .panel-login-tip {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: var(--tip);
+      font-size: 9px;
+      text-align: center;
+      padding: 8px;
+    }
+    .panel-login-tip .key-icon { width: 28px; height: 28px; margin: 0; font-size: 12px; }
+    .panel-login-tip .tip-text { font-size: 9px; margin: 0; }
+    .panel-login-tip .btn { width: auto; min-width: 100px; padding: 5px 10px; font-size: 9px; margin-bottom: 0; }
+
+    /* Landscape Windows layout */
+    .win-layout {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      gap: 4px;
+      padding: 3px;
+      background: var(--bg);
+    }
+    .win-left {
+      width: 170px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      gap: 3px;
+    }
+    .win-center {
+      flex: 1.4;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+    }
+    .win-right {
+      width: 195px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      overflow-y: auto;
+    }
+    .win-panel {
+      background: var(--white);
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      font-size: 8px;
+    }
+    .win-panel-header {
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 1px solid var(--bd);
+      background: var(--white);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .win-panel-dots {
+      position: absolute;
+      left: 5px;
+      display: flex;
+      gap: 3px;
+    }
+    .win-panel-dots span {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+    }
+    .win-panel-dots span:nth-child(1) { background: #ff5f57; }
+    .win-panel-dots span:nth-child(2) { background: #febc2e; }
+    .win-panel-dots span:nth-child(3) { background: #28c840; }
+    .win-panel-title {
+      font-size: 9px;
+      font-weight: bold;
+      color: var(--title);
+    }
+    .win-panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 3px;
+      min-height: 0;
+    }
+    .win-panel.force-light {
+      background: #ffffff;
+      border-color: #b2bfc3;
+      color: #1e2732;
+    }
+    .win-panel.force-light .win-panel-header {
+      background: #ffffff;
+      border-color: #b2bfc3;
+      color: #1e2732;
+    }
+    .win-panel.force-light .cast-empty { color: #9aa7b1; }
+    .win-panel.force-light .win-panel-title { color: #1e2732; }
+    .win-panel.force-light .input {
+      background: #ffffff;
+      border-color: #b2bfc3;
+      color: #1e2732;
+    }
+    .win-panel.force-light .btn {
+      background: #68be8d;
+      color: #ffffff;
+    }
+    @media (prefers-color-scheme: dark) {
+      .win-panel.force-light {
+        background: #ffffff;
+        border-color: #b2bfc3;
+        color: #1e2732;
+      }
+      .win-panel.force-light .win-panel-header {
+        background: #ffffff;
+        border-color: #b2bfc3;
+        color: #1e2732;
+      }
+      .win-panel.force-light .cast-empty { color: #9aa7b1; }
+      .win-panel.force-light .win-panel-title { color: #1e2732; }
+      .win-panel.force-light .input {
+        background: #ffffff;
+        border-color: #b2bfc3;
+        color: #1e2732;
+      }
+      .win-panel.force-light .btn {
+        background: #68be8d;
+        color: #ffffff;
+      }
+    }
+    html.force-dark .win-panel.force-light {
+      background: #ffffff;
+      border-color: #b2bfc3;
+      color: #1e2732;
+    }
+    html.force-dark .win-panel.force-light .win-panel-header {
+      background: #ffffff;
+      border-color: #b2bfc3;
+      color: #1e2732;
+    }
+    html.force-dark .win-panel.force-light .cast-empty { color: #9aa7b1; }
+    html.force-dark .win-panel.force-light .win-panel-title { color: #1e2732; }
+    html.force-dark .win-panel.force-light .input {
+      background: #ffffff;
+      border-color: #b2bfc3;
+      color: #1e2732;
+    }
+    html.force-dark .win-panel.force-light .btn {
+      background: #68be8d;
+      color: #ffffff;
+    }
+    .small-info {
+      font-size: 8px;
+      padding: 2px 0;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(178,191,195,0.35);
+    }
+    .small-info .k { font-weight: bold; color: var(--title); }
+    .small-info .v { color: var(--text); }
+    .small-info:last-child { border-bottom: none; }
+    .win-input-row {
+      display: flex;
+      gap: 3px;
+      align-items: center;
+    }
+    .win-input-row .input {
+      flex: 1;
+      margin-bottom: 0;
+      padding: 3px 5px;
+      font-size: 8px;
+    }
+    .win-input-row .btn {
+      width: auto;
+      padding: 3px 7px;
+      font-size: 8px;
+      margin-bottom: 0;
+      white-space: nowrap;
+    }
+    .win-tools {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      padding: 2px 0;
+      margin-top: auto;
+    }
+    .win-tool {
+      min-width: 38px;
+      height: 22px;
+      border-radius: 4px;
+      background: var(--white);
+      border: 1px solid var(--bd);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--tool);
+      font-size: 9px;
+      cursor: pointer;
+      padding: 0 5px;
+      white-space: nowrap;
+    }
+    .win-user-card {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px;
+      background: var(--white);
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      margin-top: auto;
+    }
+    .win-user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--loading-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: var(--theme);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .win-user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .win-user-info { flex: 1; min-width: 0; }
+    .win-user-name {
+      font-size: 9px;
+      font-weight: bold;
+      color: var(--title);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .win-user-fs { font-size: 8px; color: var(--text); margin-top: 1px; }
+    .win-user-action {
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      background: var(--bg);
+      border: 1px solid var(--bd);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--tool);
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .win-user-action svg { width: 14px; height: 14px; fill: currentColor; }
+    .win-icon-tools {
+      display: flex;
+      justify-content: flex-end;
+      gap: 5px;
+      padding: 2px 0;
+    }
+    .win-icon-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      background: var(--white);
+      border: 1px solid var(--bd);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--tool);
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .win-timer {
+      text-align: center;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      font-weight: bold;
+      color: #9079ad;
+      padding: 2px 0;
+    }
+    .win-status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      font-size: 9px;
+      color: var(--text);
+      padding: 2px 0;
+    }
+    .win-status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--theme);
+      border: 1px solid #455765;
+    }
+    .win-status-dot.offline { background: #f08300; }
+    .win-status-dot.fail { background: #e60033; }
+
+    /* Landscape top-bottom layouts */
+    .landscape-stack {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 10px;
+      gap: 8px;
+      background: var(--bg);
+    }
+    .landscape-top {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 0;
+    }
+    .landscape-top .room-form-icon {
+      width: 42px;
+      height: 42px;
+    }
+    .landscape-top .room-form-title { font-size: 15px; }
+    .landscape-top .room-form-subtitle { font-size: 10px; }
+    .landscape-body {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 0;
+    }
+    .landscape-card {
+      background: var(--white);
+      border: 1px solid var(--bd);
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .landscape-row {
+      display: flex;
+      gap: 8px;
+      align-items: stretch;
+    }
+    .landscape-row .landscape-card { flex: 1; }
+    .landscape-toolbar {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .landscape-toolbar .btn { width: auto; flex: 1; min-width: 60px; margin-bottom: 0; }
+    .landscape-bottom {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .landscape-tabs {
+      display: flex;
+      gap: 4px;
+      border-bottom: 1px solid var(--bd);
+      padding-bottom: 6px;
+    }
+    .landscape-tab {
+      padding: 5px 10px;
+      border-radius: 12px;
+      font-size: 10px;
+      color: var(--text);
+      background: var(--white);
+      border: 1px solid var(--bd);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .landscape-tab.active {
+      background: var(--theme);
+      color: #fff;
+      border-color: var(--theme);
+    }
+    .landscape-panel {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
+      background: var(--white);
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      padding: 6px;
+    }
+    .landscape-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .landscape-cover-info {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .landscape-cover-info .cover-box {
+      width: 140px;
+      flex-shrink: 0;
+      margin-bottom: 0;
+    }
+    .landscape-cover-info .info-list {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .landscape-cover-info .info-list .info-row {
+      padding: 4px 0;
+      font-size: 10px;
+    }
+
+    /* Landscape live dashboard */
+    .live-dashboard {
+      flex: 1;
+      display: flex;
+      gap: 6px;
+      overflow: hidden;
+      min-height: 0;
+    }
+    .live-dashboard-tabs {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding-right: 4px;
+      border-right: 1px solid var(--bd);
+    }
+    .live-dashboard-tab {
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+      padding: 8px 4px;
+      border-radius: 6px;
+      font-size: 10px;
+      color: var(--text);
+      background: var(--white);
+      border: 1px solid var(--bd);
+      cursor: pointer;
+      letter-spacing: 2px;
+    }
+    .live-dashboard-tab.active {
+      background: var(--theme);
+      color: #fff;
+      border-color: var(--theme);
+    }
+    .live-dashboard-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1fr;
+      grid-template-rows: 1fr 1fr 1fr;
+      gap: 6px;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .dash-panel {
+      background: var(--white);
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+    .dash-panel-header {
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 1px solid var(--bd);
+      font-size: 9px;
+      font-weight: bold;
+      color: var(--title);
+      flex-shrink: 0;
+      background: var(--bg);
+    }
+    .dash-panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px;
+      font-size: 9px;
+      min-height: 0;
+    }
+    .dash-panel-cast { grid-row: 1 / 3; grid-column: 1; }
+    .dash-panel-data { grid-row: 3; grid-column: 1; }
+    .dash-panel-gift { grid-row: 1 / 4; grid-column: 2; }
+    .dash-panel-enter { grid-row: 1; grid-column: 3; }
+    .dash-panel-follow { grid-row: 2; grid-column: 3; }
+    .dash-panel-fans { grid-row: 3; grid-column: 3; }
+    .dash-status-row {
+      display: flex;
+      gap: 10px;
+      font-size: 9px;
+      color: var(--text);
+      margin-top: 2px;
+    }
+
+    .hidden { display: none !important; }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-thumb { background: var(--bd); border-radius: 2px; }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div>
+      <h1>DyCast 前端原型 <span style="display:inline-block;background:var(--theme);color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;vertical-align:middle;">v3.3</span></h1>
+      <p>左侧竖屏 / 右侧横屏 · 双视图同步 · 参考 Android UI Preview</p>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()">切换深色模式</button>
+  </div>
+
+  <div class="workspace">
+    <div class="device-wrap">
+      <div class="device" id="portrait-device">
+        <div class="notch"></div>
+        <div class="screen" id="portrait-screen"></div>
+      </div>
+      <div class="device-label">竖屏 · 移动端</div>
+    </div>
+
+    <div class="device-wrap">
+      <div class="device landscape" id="landscape-device">
+        <div class="notch"></div>
+        <div class="screen" id="landscape-screen"></div>
+      </div>
+      <div class="device-label">横屏 · 电脑版式</div>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      page: 'home',
+      portraitTab: 'cast',
+      landscapeTab: 'cast',
+      session: null,
+      room: null,
+      notifications: true,
+      sound: true,
+      darkMode: false,
+      fontScale: 1,
+      inputMsg: '',
+      searchQuery: '',
+      settingsPage: 'main',
+      messages: {
+        cast: [
+          { time: '20:01', user: '粉丝A', level: 12, msg: '主播晚上好！' },
+          { time: '20:02', user: '粉丝B', level: 25, msg: '666666' },
+          { time: '20:03', user: '粉丝C', level: 8, msg: '这个好听' },
+          { time: '20:04', user: '粉丝D', level: 15, msg: '来了来了' },
+        ],
+        gift: [
+          { time: '20:02', user: '粉丝E', level: 18, icon: 'https://p3.douyinpic.com/aweme-client-static-resource/im_gold_coin.png~tplv-obj.image', name: '小心心', amount: 99 },
+          { time: '20:03', user: '粉丝F', level: 30, icon: 'https://p26-detailpage.byteimg.com/tos-cn-i-ojoqa5bfdv/ic_gift_filled.png~tplv-ojoqa5bfdv-ec-imagex-origin.png', name: '抖音', amount: 10 },
+        ],
+        member: [
+          { time: '20:01', user: '用户G', level: 12, action: '进入直播间' },
+          { time: '20:02', user: '用户H', level: 8, action: '关注了主播' },
+          { time: '20:03', user: '用户I', level: 15, action: '加入粉丝团' },
+        ],
+        data: [
+          { k: '主播', v: '***' },
+          { k: '直播状态', v: '<span class="live-badge">直播中</span>' },
+          { k: '在线观众数', v: '*****' },
+          { k: '累计观看人数', v: '*****' },
+          { k: '本场点赞数', v: '*****' },
+          { k: '粉丝数', v: '*****' },
+          { k: '本场关注数', v: '*****' },
+          { k: '最高在线人数', v: '*****' },
+          { k: '已播时长', v: '00:00:00' },
+        ]
+      },
+      searchResults: [
+        { title: '主播小美的直播间', anchor: '主播小美', viewers: '1.2w', status: '直播中' },
+        { title: '深夜电台 · 陪你聊天', anchor: '电台君', viewers: '3.4k', status: '直播中' },
+        { title: '游戏直播 王者上分', anchor: '游戏达人', viewers: '8.9k', status: '直播中' },
+        { title: '户外探险直播', anchor: '探险家', viewers: '2.1w', status: '直播中' },
+      ],
+      recent: [
+        {name:'主播小美',id:'560402456867'},
+        {name:'电台君',id:'789012'},
+        {name:'游戏达人',id:'345678'},
+        {name:'探险家',id:'901234'}
+      ]
+    };
+
+    function toggleTheme() {
+      document.documentElement.classList.toggle('force-dark');
+      state.darkMode = document.documentElement.classList.contains('force-dark');
+    }
+
+    function setPage(page) {
+      state.page = page;
+      state.settingsPage = 'main';
+      if (page === 'live') { state.room = state.room || { title: '直播间 560402456867', anchor: '***', viewers: '*****', likes: '*****' }; }
+      render();
+    }
+
+    function setPortraitTab(tab) {
+      state.portraitTab = tab;
+      renderPortrait();
+      renderLandscape();
+    }
+
+    function setLandscapeTab(tab) {
+      state.landscapeTab = tab;
+      renderLandscape();
+    }
+
+    function openLogin() { state.page = 'login'; render(); }
+    function closeLogin() { state.page = 'home'; render(); }
+    function finishLogin() { state.session = { name: '九渊菌', follow: 225, fan: 75 }; state.page = 'home'; render(); }
+    function logout() { state.session = null; render(); }
+    function toggleNotifications() { state.notifications = !state.notifications; render(); }
+    function toggleSound() { state.sound = !state.sound; render(); }
+    function setInputMsg(v) { state.inputMsg = v; }
+    function setSearchQuery(v) { state.searchQuery = v; render(); }
+    function sendMsg() { if(state.inputMsg.trim()) { state.messages.cast.push({ time: new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}), user: state.session ? state.session.name : '我', level: 1, msg: state.inputMsg }); state.inputMsg=''; render(); } }
+    function clearMessages() { state.messages.cast = []; state.messages.gift = []; state.messages.member = []; render(); }
+    function disconnect() { state.room = null; state.page = 'home'; render(); }
+    function copyRoomId() { alert('已复制房间号'); }
+    function shareRoom() { alert('分享直播间链接'); }
+    function openNotifySettings() { state.settingsPage = 'notify'; render(); }
+    function openCastSettings() { state.settingsPage = 'cast'; render(); }
+    function backToSettings() { state.settingsPage = 'main'; render(); }
+
+    function header(title, backTo, showSettings=true) {
+      return `
+        <div class="header">
+          ${backTo ? `<span class="back ice ice-arrow-left" onclick="setPage('${backTo}')"></span>` : ''}
+          <span>${title}</span>
+          ${showSettings ? `<span class="settings ice ice-setting" onclick="setPage('settings')"></span>` : ''}
+        </div>
+      `;
+    }
+
+    function moreHeader(title, backAction) {
+      return `
+        <div class="more-page-header">
+          <span class="more-page-back ice ice-arrow-left" onclick="${backAction}"></span>
+          <span>${title}</span>
+        </div>
+      `;
+    }
+
+    function recentTagsHtml(layout) {
+      const cls = layout === 'vertical' ? 'recent-tags-vertical' : (layout === 'horizontal' ? 'recent-tags-horizontal' : 'recent-tags');
+      return `<div class="${cls}">${state.recent.slice(0, 2).map(r => `
+        <div class="recent-tag" onclick="setPage('confirm')">
+          <span class="name">${r.name}</span>
+          <span class="id">${r.id}</span>
+        </div>
+      `).join('')}</div>`;
+    }
+
+    function navIcon(tab) {
+      const map = { cast: 'ice-cast', gift: 'ice-gift', member: 'ice-member', data: 'ice-data' };
+      return `<span class="nav-icon ice ${map[tab]}"></span>`;
+    }
+
+    function navItem(tab, label, activeTab, setter) {
+      return `
+        <div class="nav-item ${activeTab===tab?'active':''}" onclick="${setter}('${tab}')">
+          ${navIcon(tab)}
+          <span>${label}</span>
+        </div>
+      `;
+    }
+
+    function castList(tab) {
+      if (tab === 'gift' && !state.session) {
+        return `
+          <div class="cast-list" style="position:relative;">
+            <div class="session-overlay">
+              <div class="key-icon"><i class="ice ice-keya"></i></div>
+              <p class="tip-text">登录抖音账号后才可显示礼物信息</p>
+              <button class="btn" style="width:auto;min-width:160px;" onclick="openLogin()">抖音扫码 / 网页登录</button>
+            </div>
+          </div>
+        `;
+      }
+      let html = '<div class="cast-list">';
+      if (tab === 'cast') {
+        if (state.messages.cast.length === 0) html += '<div class="cast-empty">暂无消息</div>';
+        state.messages.cast.forEach(m => html += `<div class="cast-item"><span class="time">${m.time}</span><span class="level">[Lv.${m.level}]</span><span class="user">${m.user}：</span><span class="msg">${m.msg}</span></div>`);
+      } else if (tab === 'gift') {
+        if (state.messages.gift.length === 0) html += '<div class="cast-empty">暂无消息</div>';
+        state.messages.gift.forEach(m => html += `<div class="cast-item"><span class="time">${m.time}</span><span class="user">${m.user}</span><span class="gift-text"> 送出了 </span><img class="gift-icon" src="${m.icon}" alt="${m.name}" onerror="this.style.display='none'" /><span class="gift-amount">×${m.amount}</span></div>`);
+      } else if (tab === 'member') {
+        if (state.messages.member.length === 0) html += '<div class="cast-empty">暂无消息</div>';
+        state.messages.member.forEach(m => html += `<div class="cast-item"><span class="time">${m.time}</span><span class="level">[Lv.${m.level}]</span><span class="user">${m.user}</span><span class="social-tag"> ${m.action}</span></div>`);
+      } else if (tab === 'data') {
+        state.messages.data.forEach(m => html += `<div class="info-row" style="border-bottom:1px solid rgba(178,191,195,0.4);padding:5px 0;"><span class="k">${m.k}</span><span class="v">${m.v}</span></div>`);
+      }
+      html += '</div>';
+      return html;
+    }
+
+    /* ---------- Portrait Pages ---------- */
+
+    function pageHome() {
+      return header('抖音直播弹幕助手', null, false) + `
+        <div class="content">
+          <div class="room-form">
+            <img class="room-form-icon" src="./Android/app-icon.png" alt="应用图标" onerror="this.style.display='none'; this.parentNode.insertAdjacentHTML('afterbegin','<div class=\'room-form-icon\' style=\'background:var(--theme);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;\'><i class=\'ice ice-douyin\'></i></div>')" />
+            <h2 class="room-form-title">连接直播间</h2>
+            <p class="room-form-subtitle">输入房间号和直播链接开始使用</p>
+            <input class="room-form-input" placeholder="房间号&直播链接" />
+            <button class="btn" onclick="setPage('confirm')">下一步</button>
+            <button class="link-btn" onclick="setPage('search')">不知道房间号？去搜索直播间</button>
+            <div class="recent-section" style="width:100%;">
+              <div class="recent-title">最近进入</div>
+              ${recentTagsHtml('vertical')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function pageConfirm() {
+      return header('确认主播', 'home') + `
+        <div class="content" style="padding-top:2px;">
+          <div class="cover-box"><img src="https://picsum.photos/seed/dycastcover/400/225" alt="cover" onerror="this.style.display='none';this.parentNode.appendChild(document.createTextNode('暂无封面'))" /></div>
+          <div class="cover-title">直播间标题示例</div>
+          <div class="info-row"><span class="k">主播</span><span class="v">***</span></div>
+          <div class="info-row"><span class="k">直播状态</span><span class="v"><span class="live-badge">直播中</span></span></div>
+          <div class="info-row"><span class="k">主播粉丝数</span><span class="v">*****</span></div>
+          <div class="info-row"><span class="k">在线观众数</span><span class="v">*****</span></div>
+          <div class="info-row"><span class="k">累计观看人数</span><span class="v">*****</span></div>
+          <div class="info-row"><span class="k">本场点赞数</span><span class="v">*****</span></div>
+          <div class="confirm-actions">
+            <button class="btn" onclick="setPage('live')">确认正确，进入下一步</button>
+            <button class="btn secondary" onclick="setPage('home')">返回修改</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function pageSearch() {
+      const results = state.searchResults.map(r => `
+        <div class="search-result-item" onclick="setPage('confirm')">
+          <div class="cover"><img src="https://picsum.photos/seed/${r.anchor}/100/100" onerror="this.style.display='none'" /></div>
+          <div class="meta">
+            <div class="title">${r.title}</div>
+            <div class="desc">主播：${r.anchor} · 观众：${r.viewers}</div>
+            <div class="status"><span class="live-badge">${r.status}</span></div>
+          </div>
+          <span class="arrow ice ice-arrow-right"></span>
+        </div>
+      `).join('');
+      return header('搜索直播间', 'home') + `
+        <div class="content">
+          <div style="display:flex;gap:6px;margin-bottom:6px;">
+            <input class="input" style="flex:1;margin-bottom:0;" placeholder="搜索主播 / 房间号" value="${state.searchQuery}" oninput="setSearchQuery(this.value)" />
+            <button class="btn small" style="width:auto;" onclick="setPage('confirm')">搜索</button>
+          </div>
+          <div class="hint" style="margin-bottom:8px;">搜索结果</div>
+          ${results}
+          <div class="hint" style="margin-top:6px;">最近搜索</div>
+          ${recentTagsHtml()}
+        </div>
+      `;
+    }
+
+    function pageLogin() {
+      return `
+        <div class="login-fullscreen">
+          <div class="content" style="padding:10px;">
+            <div class="webview-box">抖音登录 WebView<br>自动提取 sessionid 并跳转</div>
+            <div class="webview-toolbar">
+              <button class="btn secondary" onclick="closeLogin()">关闭</button>
+              <button class="btn" onclick="finishLogin()">已完成登录</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function pageLive() {
+      const tabs = [
+        ['cast', '弹幕'],
+        ['gift', '礼物'],
+        ['member', '进入&关注'],
+        ['data', '主播数据'],
+      ];
+      const sessionBar = state.session ? `
+        <div class="session-bar">
+          <div class="session-avatar"><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=cute%20grey%20and%20white%20cat%20avatar%2C%20simple%20cartoon%20style%2C%20round%20portrait%2C%20clean%20white%20background&image_size=square" alt="avatar" onerror="this.style.display='none';this.parentNode.innerHTML='<i class=\'ice ice-keya\'></i>'" /></div>
+          <div class="session-info"><div class="session-title">${state.session.name}</div><div class="session-value">关注 ${state.session.follow} | 粉丝 ${state.session.fan}</div></div>
+          <div class="session-action" onclick="openLogin()" title="切换账号">
+            <svg viewBox="0 0 24 24"><path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+          </div>
+        </div>
+      ` : `
+        <div class="session-bar" onclick="openLogin()" style="cursor:pointer;">
+          <div class="session-avatar"><i class="ice ice-keya"></i></div>
+          <div class="session-info"><div class="session-title">未登录</div><div class="session-value">点击登录抖音账号</div></div>
+          <div class="session-action ice ice-arrow-right"></div>
+        </div>
+      `;
+      const roomInfo = `
+        <div style="padding:6px 10px;background:var(--white);border-bottom:1px solid var(--bd);flex-shrink:0;">
+          <div style="font-size:12px;font-weight:bold;color:var(--title);margin-bottom:3px;">直播间标题示例</div>
+          <div style="display:flex;gap:12px;font-size:10px;color:var(--text);">
+            <span>在线观众：*****</span>
+            <span>粉丝数：*****</span>
+          </div>
+        </div>
+      `;
+      return header('直播间', 'home') + `
+        ${roomInfo}
+        <div class="content" style="padding-bottom:0;">
+          ${sessionBar}
+          ${castList(state.portraitTab)}
+        </div>
+        <div class="bottom-nav">
+          ${tabs.map(t => navItem(t[0], t[1], state.portraitTab, 'setPortraitTab')).join('')}
+        </div>
+      `;
+    }
+
+    function pageSettings() {
+      if (state.settingsPage === 'notify') {
+        return `
+          <div class="more-page">
+            ${moreHeader('通知设置', 'backToSettings()')}
+            <div class="notify-body">
+              <div class="notify-group">
+                <div class="notify-group-title">总开关</div>
+                <div class="notify-row"><span class="notify-icon ice ice-setting"></span><span>通知总开关</span><div class="switch ${state.notifications?'on':''}" onclick="toggleNotifications()"><div class="switch-thumb"></div></div></div>
+                <div class="notify-row"><span class="notify-icon ice ice-cast"></span><span>前台时也推送</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+                <div class="notify-row"><span class="notify-icon ice ice-save"></span><span>后台时推送</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+              </div>
+              <div class="notify-group">
+                <div class="notify-group-title">消息类型</div>
+                <div class="notify-row"><span class="notify-icon ice ice-cast"></span><span>弹幕</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+                <div class="notify-row"><span class="notify-icon ice ice-gift"></span><span>礼物</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+                <div class="notify-row"><span class="notify-icon ice ice-member"></span><span>进入</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+                <div class="notify-row"><span class="notify-icon ice ice-member"></span><span>关注</span><div class="switch"><div class="switch-thumb"></div></div></div>
+                <div class="notify-row"><span class="notify-icon ice ice-member"></span><span>粉丝团</span><div class="switch"><div class="switch-thumb"></div></div></div>
+                <div class="notify-row"><span class="notify-icon ice ice-config"></span><span>点赞</span><div class="switch"><div class="switch-thumb"></div></div></div>
+              </div>
+              <div class="notify-group">
+                <div class="notify-group-title">合并设置</div>
+                <div class="notify-row"><span class="notify-icon ice ice-config"></span><span>合并间隔（秒）</span><input class="notify-number" value="3" /></div>
+                <div class="notify-hint">0 表示不合并，每条消息单独通知</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      if (state.settingsPage === 'cast') {
+        return `
+          <div class="more-page">
+            ${moreHeader('弹幕设置', 'backToSettings()')}
+            <div class="notify-body">
+              <div class="notify-group">
+                <div class="notify-group-title">显示</div>
+                <div class="notify-row"><span>显示用户等级</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+                <div class="notify-row"><span>显示进入消息</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+                <div class="notify-row"><span>显示礼物消息</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+              </div>
+              <div class="notify-group">
+                <div class="notify-group-title">字体</div>
+                <div class="notify-row"><span>字体大小</span><span class="value">标准</span></div>
+                <div class="notify-row"><span>行高</span><span class="value">标准</span></div>
+              </div>
+              <div class="notify-group">
+                <div class="notify-group-title">过滤</div>
+                <div class="notify-row"><span>屏蔽关键词</span><span class="notify-arrow"></span></div>
+                <div class="notify-row"><span>屏蔽低等级用户</span><div class="switch"><div class="switch-thumb"></div></div></div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      return `
+        <div class="more-page">
+          ${moreHeader('设置', "setPage('live')")}
+          <div class="more-page-body">
+            <div class="more-group">
+              <div class="more-group-title">工具</div>
+              <div class="more-item">
+                <span class="icon ice ice-stat"></span>
+                <span>控制台</span>
+                <span class="arrow ice ice-arrow-right"></span>
+              </div>
+              <div class="more-item">
+                <span class="icon ice ice-save"></span>
+                <span>保存弹幕</span>
+                <span class="arrow ice ice-arrow-right"></span>
+              </div>
+              <div class="more-item">
+                <span class="icon ice ice-room-id"></span>
+                <span>切换房间号</span>
+                <span class="arrow ice ice-arrow-right"></span>
+              </div>
+              <div class="more-item" onclick="openCastSettings()">
+                <span class="icon ice ice-cast"></span>
+                <span>弹幕设置</span>
+                <span class="arrow ice ice-arrow-right"></span>
+              </div>
+            </div>
+            <div class="more-group">
+              <div class="more-group-title">后台保活</div>
+              <div class="more-item"><span>开启前台服务保活</span><div class="switch on" style="margin-left:auto;"><div class="switch-thumb"></div></div></div>
+              <div class="more-item"><span>电池优化白名单</span><span class="arrow ice ice-arrow-right"></span></div>
+              <div class="more-item"><span>自启动 / 后台运行设置</span><span class="arrow ice ice-arrow-right"></span></div>
+              <div class="more-item"><span>保活引导</span><span class="arrow ice ice-arrow-right"></span></div>
+            </div>
+            <div class="more-group">
+              <div class="more-group-title">通知</div>
+              <div class="more-item" onclick="openNotifySettings()">
+                <span class="icon ice ice-msg"></span>
+                <span>通知设置</span>
+                <span class="arrow ice ice-arrow-right"></span>
+              </div>
+            </div>
+            <div class="more-group">
+              <div class="more-group-title">关于</div>
+              <div class="more-item"><span>版本</span><span class="value">3.3.0</span></div>
+              <div class="more-item"><span>检查更新</span><span class="arrow ice ice-arrow-right"></span></div>
+              <div class="more-item"><span>帮助与反馈</span><span class="arrow ice ice-arrow-right"></span></div>
+              <div class="more-item"><span>隐私政策</span><span class="arrow ice ice-arrow-right"></span></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    /* ---------- Landscape Pages ---------- */
+
+    function landscapeHome() {
+      return `
+        <div class="landscape-stack">
+          <div class="landscape-top">
+            <img class="room-form-icon" src="./Android/app-icon.png" alt="" onerror="this.style.display='none'; this.parentNode.insertAdjacentHTML('afterbegin','<div class=\'room-form-icon\' style=\'background:var(--theme);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;\'><i class=\'ice ice-douyin\'></i></div>')" />
+            <div class="room-form-title">连接直播间</div>
+            <p class="room-form-subtitle">输入房间号和直播链接开始使用</p>
+          </div>
+          <div class="landscape-card">
+            <input class="room-form-input" placeholder="房间号&直播链接" />
+            <button class="btn" onclick="setPage('confirm')">下一步</button>
+            <button class="link-btn" style="text-align:center;width:100%;" onclick="setPage('search')">不知道房间号？去搜索直播间</button>
+          </div>
+          <div class="landscape-bottom">
+            <div class="recent-title">最近进入</div>
+            ${recentTagsHtml('horizontal')}
+          </div>
+        </div>
+      `;
+    }
+
+    function landscapeSearch() {
+      const results = state.searchResults.map(r => `
+        <div class="search-result-item" onclick="setPage('confirm')" style="margin-bottom:5px;">
+          <div class="cover" style="width:40px;height:40px;"><img src="https://picsum.photos/seed/${r.anchor}/100/100" onerror="this.style.display='none'" /></div>
+          <div class="meta">
+            <div class="title">${r.title}</div>
+            <div class="desc">${r.anchor} · ${r.viewers}</div>
+          </div>
+          <span class="arrow ice ice-arrow-right" style="font-size:11px;"></span>
+        </div>
+      `).join('');
+      return `
+        <div class="landscape-stack">
+          <div style="display:flex;gap:6px;flex-shrink:0;">
+            <input class="input" style="flex:1;margin-bottom:0;" placeholder="搜索主播 / 房间号" value="${state.searchQuery}" oninput="setSearchQuery(this.value)" />
+            <button class="btn small" style="width:auto;" onclick="setPage('confirm')">搜索</button>
+            <button class="btn small secondary" style="width:auto;" onclick="setPage('home')">取消</button>
+          </div>
+          <div class="landscape-body">
+            <div class="hint">搜索结果</div>
+            ${results}
+          </div>
+          <div class="landscape-bottom">
+            <div class="hint">最近搜索</div>
+            ${recentTagsHtml('horizontal')}
+          </div>
+        </div>
+      `;
+    }
+
+    function landscapeConfirm() {
+      return `
+        <div class="landscape-stack">
+          <div class="landscape-row" style="flex:1;align-items:stretch;">
+            <div class="landscape-card" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
+              <div class="cover-box" style="width:100%;aspect-ratio:1/1;max-width:160px;border-radius:8px;"><img src="https://picsum.photos/seed/dycastcover/400/400" alt="cover" onerror="this.style.display='none';this.parentNode.appendChild(document.createTextNode('暂无封面'))" /></div>
+              <div class="cover-title" style="margin:0;">直播间标题示例</div>
+            </div>
+            <div class="landscape-card" style="flex:1.5;display:flex;flex-direction:column;gap:4px;">
+              <div class="info-row"><span class="k">主播</span><span class="v">***</span></div>
+              <div class="info-row"><span class="k">直播状态</span><span class="v"><span class="live-badge">直播中</span></span></div>
+              <div class="info-row"><span class="k">主播粉丝数</span><span class="v">*****</span></div>
+              <div class="info-row"><span class="k">在线观众数</span><span class="v">*****</span></div>
+              <div class="info-row"><span class="k">累计观看人数</span><span class="v">*****</span></div>
+              <div class="info-row"><span class="k">本场点赞数</span><span class="v">*****</span></div>
+              <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;">
+                <button class="btn" onclick="setPage('live')">确认并进入</button>
+                <button class="btn secondary" onclick="setPage('home')">返回修改</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function landscapeLogin() {
+      return `
+        <div class="login-fullscreen">
+          <div class="content" style="padding:10px;">
+            <div class="webview-box">抖音登录 WebView<br>自动提取 sessionid 并跳转</div>
+            <div class="webview-toolbar">
+              <button class="btn secondary" onclick="closeLogin()">关闭</button>
+              <button class="btn" onclick="finishLogin()">已完成登录</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function landscapeLive() {
+      const tabs = [
+        ['cast', '弹幕'],
+        ['gift', '礼物'],
+        ['member', '进入&关注'],
+        ['data', '主播数据'],
+      ];
+      const sessionCard = state.session ? `
+        <div class="win-user-card" style="margin-top:0;cursor:pointer;" onclick="openLogin()">
+          <div class="win-user-avatar"><img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=cute%20grey%20and%20white%20cat%20avatar%2C%20simple%20cartoon%20style%2C%20round%20portrait%2C%20clean%20white%20background&image_size=square" alt="avatar" onerror="this.style.display='none';this.parentNode.innerHTML='<i class=\'ice ice-keya\'></i>'" /></div>
+          <div class="win-user-info">
+            <div class="win-user-name">${state.session.name}</div>
+            <div class="win-user-fs">关注 ${state.session.follow} | 粉丝 ${state.session.fan}</div>
+          </div>
+          <div class="win-user-action" title="退出登录">
+            <svg viewBox="0 0 24 24"><path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+          </div>
+        </div>
+      ` : `
+        <div class="win-user-card" onclick="openLogin()" style="cursor:pointer;">
+          <div class="win-user-avatar"><i class="ice ice-keya"></i></div>
+          <div class="win-user-info">
+            <div class="win-user-name">未登录</div>
+            <div class="win-user-fs">点击登录抖音账号</div>
+          </div>
+          <div class="win-user-action" title="登录/更换">
+            <svg viewBox="0 0 24 24"><path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+          </div>
+        </div>
+      `;
+      const giftBody = !state.session ? `
+        <div class="panel-login-tip">
+          <div class="key-icon"><i class="ice ice-keya"></i></div>
+          <p class="tip-text">登录抖音账号后才可显示礼物信息</p>
+          <button class="btn" onclick="openLogin()">抖音扫码 / 网页登录</button>
+        </div>
+      ` : state.messages.gift.map(m => `<div class="cast-item"><span class="time">${m.time}</span><span class="user">${m.user}</span><span class="gift-text"> 送出 <img class="gift-icon" src="${m.icon}" onerror="this.style.display='none'" />${m.name} x${m.amount}</span></div>`).join('');
+      const castBody = state.messages.cast.length === 0 ? '<div class="cast-empty">暂无消息</div>' : state.messages.cast.map(m => `<div class="cast-item"><span class="time">${m.time}</span><span class="level">[Lv.${m.level}]</span><span class="user">${m.user}：</span><span class="msg">${m.msg}</span></div>`).join('');
+      const dataBody = state.messages.data.map(d => `<div class="info-row" style="padding:3px 0;font-size:9px;"><span class="k">${d.k}</span><span class="v">${d.v}</span></div>`).join('');
+      const enterBody = state.messages.member.filter(m => m.action.includes('进入')).length === 0 ? '<div class="cast-empty">暂无消息</div>' : state.messages.member.filter(m => m.action.includes('进入')).map(m => `<div class="cast-item"><span class="time">${m.time}</span><span class="level">[Lv.${m.level}]</span><span class="user">${m.user}</span><span class="social-tag"> ${m.action}</span></div>`).join('');
+      const followBody = state.messages.member.filter(m => m.action.includes('关注')).length === 0 ? '<div class="cast-empty">暂无消息</div>' : state.messages.member.filter(m => m.action.includes('关注')).map(m => `<div class="cast-item"><span class="time">${m.time}</span><span class="level">[Lv.${m.level}]</span><span class="user">${m.user}</span><span class="social-tag"> ${m.action}</span></div>`).join('');
+      const fansBody = state.messages.member.filter(m => m.action.includes('粉丝团')).length === 0 ? '<div class="cast-empty">暂无消息</div>' : state.messages.member.filter(m => m.action.includes('粉丝团')).map(m => `<div class="cast-item"><span class="time">${m.time}</span><span class="level">[Lv.${m.level}]</span><span class="user">${m.user}</span><span class="social-tag"> ${m.action}</span></div>`).join('');
+      const current = state.landscapeTab;
+
+      return `
+        <div class="landscape-stack" style="padding:8px;gap:6px;">
+          <div class="landscape-row" style="flex-shrink:0;">
+            <div class="landscape-card" style="flex:1.2;gap:4px;padding:8px;">
+              <div style="display:flex;gap:8px;align-items:center;">
+                <div class="cover-box" style="width:90px;height:50px;margin:0;border-radius:4px;"><img src="https://picsum.photos/seed/dycastcover/400/225" alt="cover" onerror="this.style.display='none';this.parentNode.appendChild(document.createTextNode('暂无封面'))" /></div>
+                <div style="flex:1;min-width:0;">
+                  <div class="cover-title" style="font-size:10px;text-align:left;margin:0;">直播间标题示例</div>
+                  <div class="dash-status-row"><span>在线观众：*****</span><span>粉丝数：*****</span></div>
+                  <div class="small-info" style="padding:1px 0;"><span class="k">主播</span><span class="v">***</span></div>
+                  <div class="small-info" style="padding:1px 0;"><span class="k">状态</span><span class="v"><span class="live-badge">直播中</span></span></div>
+                </div>
+              </div>
+            </div>
+            <div class="landscape-card" style="flex:1;gap:4px;padding:8px;">
+              ${sessionCard}
+            </div>
+            <div class="landscape-card" style="flex:0.5;gap:4px;padding:8px;justify-content:center;align-items:center;">
+              <div class="landscape-toolbar" style="gap:4px;justify-content:center;">
+                <div class="win-icon-btn ice ice-setting" title="设置" onclick="setPage('settings')"></div>
+              </div>
+              <div class="win-timer" style="font-size:12px;padding:0;">00:00:00</div>
+              <div class="win-status" style="padding:0;"><div class="win-status-dot"></div><span>已连接</span></div>
+            </div>
+          </div>
+          <div class="live-dashboard">
+            <div class="live-dashboard-tabs">
+              ${tabs.map(t => `<div class="live-dashboard-tab ${t[0]===current?'active':''}" onclick="setLandscapeTab('${t[0]}')">${t[1]}</div>`).join('')}
+            </div>
+            <div class="live-dashboard-grid">
+              <div class="dash-panel dash-panel-cast">
+                <div class="dash-panel-header">弹幕信息</div>
+                <div class="dash-panel-body">${castBody}</div>
+              </div>
+              <div class="dash-panel dash-panel-data">
+                <div class="dash-panel-header">主播数据</div>
+                <div class="dash-panel-body">${dataBody}</div>
+              </div>
+              <div class="dash-panel dash-panel-gift">
+                <div class="dash-panel-header">礼物信息</div>
+                <div class="dash-panel-body">${giftBody}</div>
+              </div>
+              <div class="dash-panel dash-panel-enter">
+                <div class="dash-panel-header">进入信息</div>
+                <div class="dash-panel-body">${enterBody}</div>
+              </div>
+              <div class="dash-panel dash-panel-follow">
+                <div class="dash-panel-header">关注信息</div>
+                <div class="dash-panel-body">${followBody}</div>
+              </div>
+              <div class="dash-panel dash-panel-fans">
+                <div class="dash-panel-header">粉丝团信息</div>
+                <div class="dash-panel-body">${fansBody}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function landscapeSettings() {
+      if (state.settingsPage === 'notify') {
+        return `
+          <div class="landscape-stack">
+            ${moreHeader('通知设置', 'backToSettings()')}
+            <div class="landscape-body">
+              <div class="landscape-grid-2">
+                <div class="notify-group">
+                  <div class="notify-group-title">总开关</div>
+                  <div class="notify-row"><span class="notify-icon ice ice-setting"></span><span>通知总开关</span><div class="switch ${state.notifications?'on':''}" onclick="toggleNotifications()"><div class="switch-thumb"></div></div></div>
+                  <div class="notify-row"><span class="notify-icon ice ice-cast"></span><span>前台时也推送</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+                  <div class="notify-row"><span class="notify-icon ice ice-save"></span><span>后台时推送</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+                </div>
+                <div class="notify-group">
+                  <div class="notify-group-title">消息类型</div>
+                  <div class="notify-row"><span class="notify-icon ice ice-cast"></span><span>弹幕</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+                  <div class="notify-row"><span class="notify-icon ice ice-gift"></span><span>礼物</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+                  <div class="notify-row"><span class="notify-icon ice ice-member"></span><span>进入</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+                  <div class="notify-row"><span class="notify-icon ice ice-member"></span><span>关注</span><div class="switch"><div class="switch-thumb"></div></div></div>
+                  <div class="notify-row"><span class="notify-icon ice ice-member"></span><span>粉丝团</span><div class="switch"><div class="switch-thumb"></div></div></div>
+                  <div class="notify-row"><span class="notify-icon ice ice-config"></span><span>点赞</span><div class="switch"><div class="switch-thumb"></div></div></div>
+                </div>
+              </div>
+              <div class="landscape-grid-2">
+                <div class="notify-group">
+                  <div class="notify-group-title">合并设置</div>
+                  <div class="notify-row"><span class="notify-icon ice ice-config"></span><span>合并间隔（秒）</span><input class="notify-number" value="3" /></div>
+                  <div class="notify-hint">0 表示不合并，每条消息单独通知</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      if (state.settingsPage === 'cast') {
+        return `
+          <div class="landscape-stack">
+            ${moreHeader('弹幕设置', 'backToSettings()')}
+            <div class="landscape-body">
+              <div class="landscape-grid-2">
+                <div class="notify-group">
+                  <div class="notify-group-title">显示</div>
+                  <div class="notify-row"><span>显示用户等级</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+                  <div class="notify-row"><span>显示进入消息</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+                  <div class="notify-row"><span>显示礼物消息</span><div class="switch on"><div class="switch-thumb"></div></div></div>
+                </div>
+                <div class="notify-group">
+                  <div class="notify-group-title">字体</div>
+                  <div class="notify-row"><span>字体大小</span><span class="value">标准</span></div>
+                  <div class="notify-row"><span>行高</span><span class="value">标准</span></div>
+                </div>
+              </div>
+              <div class="landscape-grid-2">
+                <div class="notify-group">
+                  <div class="notify-group-title">过滤</div>
+                  <div class="notify-row"><span>屏蔽关键词</span><span class="notify-arrow"></span></div>
+                  <div class="notify-row"><span>屏蔽低等级用户</span><div class="switch"><div class="switch-thumb"></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      return `
+        <div class="landscape-stack">
+          ${moreHeader('设置', "setPage('live')")}
+          <div class="landscape-body landscape-grid-2">
+            <div class="more-group">
+              <div class="more-group-title">工具</div>
+              <div class="more-item">
+                <span class="icon ice ice-stat"></span>
+                <span>控制台</span>
+                <span class="arrow ice ice-arrow-right"></span>
+              </div>
+              <div class="more-item">
+                <span class="icon ice ice-save"></span>
+                <span>保存弹幕</span>
+                <span class="arrow ice ice-arrow-right"></span>
+              </div>
+              <div class="more-item">
+                <span class="icon ice ice-room-id"></span>
+                <span>切换房间号</span>
+                <span class="arrow ice ice-arrow-right"></span>
+              </div>
+              <div class="more-item" onclick="openCastSettings()">
+                <span class="icon ice ice-cast"></span>
+                <span>弹幕设置</span>
+                <span class="arrow ice ice-arrow-right"></span>
+              </div>
+            </div>
+            <div class="more-group">
+              <div class="more-group-title">后台保活</div>
+              <div class="more-item"><span>开启前台服务保活</span><div class="switch on" style="margin-left:auto;"><div class="switch-thumb"></div></div></div>
+              <div class="more-item"><span>电池优化白名单</span><span class="arrow ice ice-arrow-right"></span></div>
+              <div class="more-item"><span>自启动 / 后台运行设置</span><span class="arrow ice ice-arrow-right"></span></div>
+              <div class="more-item"><span>保活引导</span><span class="arrow ice ice-arrow-right"></span></div>
+            </div>
+            <div class="more-group">
+              <div class="more-group-title">通知</div>
+              <div class="more-item" onclick="openNotifySettings()">
+                <span class="icon ice ice-msg"></span>
+                <span>通知设置</span>
+                <span class="arrow ice ice-arrow-right"></span>
+              </div>
+            </div>
+            <div class="more-group">
+              <div class="more-group-title">关于</div>
+              <div class="more-item"><span>版本</span><span class="value">3.3.0</span></div>
+              <div class="more-item"><span>检查更新</span><span class="arrow ice ice-arrow-right"></span></div>
+              <div class="more-item"><span>帮助与反馈</span><span class="arrow ice ice-arrow-right"></span></div>
+              <div class="more-item"><span>隐私政策</span><span class="arrow ice ice-arrow-right"></span></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderPortrait() {
+      const pages = { home: pageHome, confirm: pageConfirm, search: pageSearch, live: pageLive, settings: pageSettings, login: pageLogin };
+      document.getElementById('portrait-screen').innerHTML = pages[state.page]();
+    }
+
+    function renderLandscape() {
+      const pages = {
+        home: landscapeHome,
+        confirm: landscapeConfirm,
+        search: landscapeSearch,
+        live: landscapeLive,
+        settings: landscapeSettings,
+        login: landscapeLogin
+      };
+      document.getElementById('landscape-screen').innerHTML = pages[state.page]();
+    }
+
+    function render() {
+      renderPortrait();
+      renderLandscape();
+    }
+
+    render();
+  </script>
+</body>
+</html>

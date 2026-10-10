@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>方案 B - 横屏三栏布局 | DyCast 安卓原型</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{background:#0f0f1a;display:flex;flex-direction:column;align-items:center;padding:24px 12px;min-height:100vh}
+.scheme-title{color:#c9c9e0;font-size:13px;margin-bottom:18px;text-align:center;line-height:1.7;max-width:880px}
+.scheme-title b{color:#fff;font-size:18px;display:block;margin-bottom:6px}
+.scheme-title .tag{display:inline-block;background:#2a2a4a;color:#8ec5ff;font-size:11px;padding:2px 10px;border-radius:10px;margin:0 3px}
+
+.phone{width:844px;height:390px;background:#1a1a2e;border-radius:38px;border:9px solid #05050a;box-shadow:0 24px 70px rgba(0,0,0,.7);position:relative;overflow:hidden;display:flex;flex-direction:column}
+.phone::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:26px;height:150px;background:#05050a;border-radius:0 18px 18px 0;z-index:30}
+
+.statusbar{height:30px;background:#1a1a2e;display:flex;justify-content:space-between;align-items:center;padding:0 30px 0 50px;color:#fff;font-size:12px;font-weight:600;flex-shrink:0}
+.statusbar .right{display:flex;gap:6px;align-items:center}
+.bar-sig{display:flex;gap:2px;align-items:flex-end}
+.bar-sig i{display:block;width:3px;background:#fff;border-radius:1px}
+.bar-sig i:nth-child(1){height:4px}.bar-sig i:nth-child(2){height:6px}.bar-sig i:nth-child(3){height:8px}.bar-sig i:nth-child(4){height:10px;opacity:.4}
+.wifi{width:14px;height:10px;position:relative}
+.wifi i{position:absolute;bottom:0;left:50%;transform:translateX(-50%);border:2px solid #fff;border-bottom:none;border-radius:50% 50% 0 0}
+.wifi i:nth-child(1){width:14px;height:8px}
+.wifi i:nth-child(2){width:7px;height:4px}
+.wifi i:nth-child(3){width:3px;height:2px;border-radius:50%}
+.batt{width:22px;height:11px;border:1.5px solid #fff;border-radius:3px;position:relative;padding:1.5px}
+.batt::after{content:"";position:absolute;right:-3px;top:3px;width:2px;height:4px;background:#fff;border-radius:0 2px 2px 0}
+.batt i{display:block;width:82%;height:100%;background:#5fd35f;border-radius:1px}
+
+.main{flex:1;display:flex;overflow:hidden}
+.left-panel{width:208px;background:#20203a;border-right:1px solid #2c2c4e;display:flex;flex-direction:column;flex-shrink:0}
+.left-top{padding:10px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid #2c2c4e}
+.room-row{display:flex;gap:6px}
+.room-input{flex:1;height:32px;background:#1a1a2e;border:1px solid #3a3a5e;border-radius:8px;padding:0 10px;color:#fff;font-size:12px;outline:none}
+.room-input::placeholder{color:#6a6a8a}
+.room-input:focus{border-color:#5b6cff}
+.connect-btn{height:32px;padding:0 12px;background:linear-gradient(135deg,#5b6cff,#8e6cff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit}
+.session-card{display:flex;align-items:center;gap:8px;padding:8px;background:#1a1a2e;border:1px solid #2c2c4e;border-radius:10px}
+.session-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#ff6b9d,#b388ff);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0}
+.session-info{flex:1;min-width:0}
+.session-name{color:#fff;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.session-sub{color:#8a8aaa;font-size:10px;margin-top:1px}
+.key-mini{width:28px;height:28px;background:#2a2a4a;border:1px solid #3a3a5e;border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative}
+.key-mini:hover{background:#3a3a5e}
+.key-mini svg{width:14px;height:14px;fill:none;stroke:#c9c9e0;stroke-width:2}
+.key-mini .dot{position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;background:#ff4d4f;border:2px solid #20203a}
+.key-mini .dot.ok{background:#5fd35f}
+
+.info-block{padding:10px;flex:1;overflow-y:auto}
+.info-block::-webkit-scrollbar{width:4px}
+.info-block::-webkit-scrollbar-thumb{background:#3a3a5e;border-radius:2px}
+.info-title{color:#8a8aaa;font-size:10px;font-weight:600;margin-bottom:6px;letter-spacing:.5px}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:12px;border-bottom:1px solid #2c2c4e}
+.info-row:last-child{border-bottom:none}
+.info-row .lbl{color:#8a8aaa}
+.info-row .val{color:#4fc3f7;font-weight:600}
+.info-row .val.gold{color:#ffd166}
+.info-row .val.pink{color:#ff6b9d}
+
+.center-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#1a1a2e;min-width:0}
+.center-head{height:34px;display:flex;align-items:center;padding:0 14px;border-bottom:1px solid #2c2c4e;color:#c9c9e0;font-size:12px;font-weight:600;flex-shrink:0}
+.center-head .count{margin-left:auto;color:#5fd35f}
+.danmu-list{flex:1;overflow-y:auto;padding:4px 10px}
+.danmu-list::-webkit-scrollbar{width:4px}
+.danmu-list::-webkit-scrollbar-thumb{background:#3a3a5e;border-radius:2px}
+.msg{display:flex;gap:8px;padding:6px 6px;align-items:flex-start;border-radius:8px}
+.msg:hover{background:#22223e}
+.avatar{width:26px;height:26px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;overflow:hidden}
+.msg-body{flex:1;min-width:0}
+.msg-name{font-size:11px;font-weight:600;margin-bottom:1px}
+.msg-text{font-size:13px;color:#e8e8f0;line-height:1.45;word-break:break-word}
+
+.right-panel{width:208px;background:#20203a;border-left:1px solid #2c2c4e;display:flex;flex-direction:column;flex-shrink:0}
+.right-tabs{display:flex;border-bottom:1px solid #2c2c4e;flex-shrink:0}
+.rtab{flex:1;background:none;border:none;color:#6a6a8a;font-size:11px;padding:9px 4px;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent}
+.rtab.active{color:#5b6cff;border-bottom-color:#5b6cff;font-weight:600}
+.rtab:hover{color:#8e9bff}
+.rpane{flex:1;overflow-y:auto;padding:8px;display:none}
+.rpane.active{display:block}
+.rpane::-webkit-scrollbar{width:4px}
+.rpane::-webkit-scrollbar-thumb{background:#3a3a5e;border-radius:2px}
+.gift-item{display:flex;align-items:center;gap:6px;padding:7px 6px;border-radius:8px;background:#22223e;margin-bottom:6px;border:1px solid #2c2c4e}
+.gift-item:hover{background:#2a2a4a}
+.gift-name{color:#ffd166;font-weight:600;font-size:11px}
+.gift-count{color:#ffd166;font-weight:700;font-size:12px;margin-left:auto;background:rgba(255,209,102,.12);padding:1px 8px;border-radius:8px}
+.gift-icon{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#ffd166,#ff9f43);display:flex;align-items:center;justify-content:center;color:#1a1a2e;font-weight:700;font-size:10px;flex-shrink:0}
+.entry-item{display:flex;align-items:center;gap:6px;padding:7px 6px;border-radius:8px;background:#22223e;margin-bottom:6px;border:1px solid #2c2c4e;font-size:11px}
+.entry-item .lbl{color:#8a8aaa;width:42px;flex-shrink:0}
+.entry-item .uname{color:#e8e8f0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.entry-item .tag{font-size:10px;padding:1px 6px;border-radius:6px}
+.tag-enter{background:rgba(79,195,247,.15);color:#4fc3f7}
+.tag-follow{background:rgba(255,107,157,.15);color:#ff6b9d}
+.tag-fan{background:rgba(255,209,102,.15);color:#ffd166}
+
+.sheet-mask{position:absolute;inset:0;background:rgba(0,0,0,.55);z-index:40;opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s}
+.sheet-mask.active{opacity:1;visibility:visible}
+.sheet{position:absolute;left:50%;top:50%;transform:translate(-50%,-46%);width:340px;background:#22223e;border-radius:18px;padding:18px;z-index:41;box-shadow:0 12px 40px rgba(0,0,0,.5);opacity:0;transition:opacity .25s,transform .25s}
+.sheet-mask.active .sheet{opacity:1;transform:translate(-50%,-50%)}
+.sheet-title{color:#fff;font-size:15px;font-weight:600;margin-bottom:12px}
+.sheet-input{width:100%;height:38px;background:#1a1a2e;border:1px solid #3a3a5e;border-radius:8px;padding:0 12px;color:#fff;font-size:13px;outline:none;font-family:inherit}
+.sheet-input:focus{border-color:#5b6cff}
+.sheet-input::placeholder{color:#6a6a8a}
+.sheet-hint{color:#8a8aaa;font-size:11px;line-height:1.7;margin:10px 0 14px}
+.sheet-hint code{background:#1a1a2e;padding:1px 5px;border-radius:4px;color:#8ec5ff;font-size:10px}
+.sheet-btn{width:100%;height:38px;background:linear-gradient(135deg,#5b6cff,#8e6cff);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.toast{position:absolute;top:40px;left:50%;transform:translateX(-50%) translateY(-20px);background:rgba(0,0,0,.85);color:#fff;padding:7px 16px;border-radius:18px;font-size:12px;z-index:50;opacity:0;visibility:hidden;transition:opacity .25s,transform .25s,visibility .25s}
+.toast.show{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="scheme-title">
+  <b>方案 B - 横屏三栏布局（与桌面版一致）</b>
+  <span class="tag">横屏 844x390</span><span class="tag">左信息</span><span class="tag">中弹幕</span><span class="tag">右礼物</span>
+  <div style="margin-top:6px">左栏房间信息与 sessionid，中间弹幕流，右栏礼物与进出场</div>
+</div>
+
+<div class="phone">
+  <div class="statusbar">
+    <span>9:41</span>
+    <div class="right">
+      <div class="bar-sig"><i></i><i></i><i></i><i></i></div>
+      <div class="wifi"><i></i><i></i><i></i></div>
+      <div class="batt"><i></i></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="left-panel">
+      <div class="left-top">
+        <div class="room-row">
+          <input class="room-input" id="roomInput" type="text" placeholder="房间号" value="80017765432">
+          <button class="connect-btn" id="connectBtn">连接</button>
+        </div>
+        <div class="session-card">
+          <div class="session-avatar">小</div>
+          <div class="session-info">
+            <div class="session-name">小幸运_主播</div>
+            <div class="session-sub">粉丝 42.1w · 关注 128</div>
+          </div>
+          <div class="key-mini" id="keyBtn" aria-label="设置 sessionid">
+            <svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12 L20 3 M17 6 L19 8 M14 9 L16 11"/></svg>
+            <span class="dot ok" id="keyDot"></span>
+          </div>
+        </div>
+      </div>
+      <div class="info-block">
+        <div class="info-title">直播间信息</div>
+        <div class="info-row"><span class="lbl">主播</span><span class="val">小幸运_主播</span></div>
+        <div class="info-row"><span class="lbl">房间号</span><span class="val">80017765432</span></div>
+        <div class="info-row"><span class="lbl">在线人数</span><span class="val">12,486</span></div>
+        <div class="info-row"><span class="lbl">累计观看</span><span class="val green" style="color:#5fd35f">58,920</span></div>
+        <div class="info-row"><span class="lbl">本场点赞</span><span class="val pink">3,205</span></div>
+        <div class="info-row"><span class="lbl">新增粉丝</span><span class="val gold">186</span></div>
+        <div class="info-row"><span class="lbl">音浪</span><span class="val gold">8,640</span></div>
+        <div class="info-row"><span class="lbl">开播时长</span><span class="val">02:36:18</span></div>
+      </div>
+    </div>
+
+    <div class="center-panel">
+      <div class="center-head"><span>弹幕流</span><span class="count">在线 12,486</span></div>
+      <div class="danmu-list" id="danmuList"></div>
+    </div>
+
+    <div class="right-panel">
+      <div class="right-tabs">
+        <button class="rtab active" data-rtab="gift">礼物信息</button>
+        <button class="rtab" data-rtab="entry">进入&amp;关注&amp;粉丝团</button>
+      </div>
+      <div class="rpane active" id="rpane-gift"></div>
+      <div class="rpane" id="rpane-entry"></div>
+    </div>
+  </div>
+
+  <div class="sheet-mask" id="sheetMask">
+    <div class="sheet">
+      <div class="sheet-title">设置 sessionid</div>
+      <input class="sheet-input" id="sessionInput" type="text" placeholder="粘贴你的 sessionid">
+      <div class="sheet-hint">获取指引：打开抖音直播间网页版，按 F12 调出开发者工具，在 Cookie 中找到 <code>sessionid</code> 字段并复制其值。</div>
+      <button class="sheet-btn" id="saveSessionBtn">保存</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+(function(){
+  var ucolors=['#ff6b9d','#4fc3f7','#ffd166','#5fd35f','#b388ff','#ff9f43','#4dd0e1','#f06292'];
+  var danmu=[
+    {n:'星河漫游者',t:'主播今天这身衣服太好看了吧',c:0},
+    {n:'柠檬不萌',t:'哈哈哈哈这个梗我也玩过',c:1},
+    {n:'夏天的风',t:'已三连 关注啦 期待下一场直播',c:2},
+    {n:'猫咪不吃鱼',t:'这个声线真的绝了 听得我鸡皮疙瘩',c:3},
+    {n:'夜空中最亮的星',t:'刚进来 请问这是第一次直播吗',c:4},
+    {n:'咸鱼翻身记',t:'主播能不能唱一首晚风心里吹',c:5},
+    {n:'云端漫步',t:'这画质好清晰 什么设备呀',c:6},
+    {n:'芒果布丁',t:'我来晚了 错过了什么精彩环节',c:7},
+    {n:'听风说你来过',t:'主播笑起来真好看 多笑笑呀',c:0},
+    {n:'森林系少女',t:'已下单同款口红 哈哈哈',c:1}
+  ];
+  var gifts=[
+    {n:'星河漫游者',g:'爱心玫瑰',num:9,c:0},
+    {n:'追光少年',g:'嘉年华',num:1,c:3},
+    {n:'云端漫步',g:'火箭',num:5,c:6},
+    {n:'芒果布丁',g:'棒棒糖',num:66,c:7},
+    {n:'听风说你来过',g:'城堡',num:1,c:4},
+    {n:'夜空中最亮的星',g:'亲吻',num:99,c:5}
+  ];
+  var entries=[
+    {n:'失眠的猫头鹰',type:'enter',c:2},
+    {n:'追光少年',type:'follow',c:3},
+    {n:'森林系少女',type:'fan',c:1},
+    {n:'夏天的风',type:'follow',c:2},
+    {n:'猫咪不吃鱼',type:'enter',c:3},
+    {n:'云端漫步',type:'fan',c:6}
+  ];
+
+  function avatar(name,color){
+    var s=name.replace(/\s/g,'').slice(0,1);
+    return '<div class="avatar" style="background:linear-gradient(135deg,'+ucolors[color]+','+ucolors[(color+3)%ucolors.length]+')">'+s+'</div>';
+  }
+
+  var dl=document.getElementById('danmuList');
+  var dh='';
+  for(var i=0;i<danmu.length;i++){
+    var d=danmu[i];
+    dh+='<div class="msg">'+avatar(d.n,d.c)+
+      '<div class="msg-body"><div class="msg-name" style="color:'+ucolors[d.c]+'">'+d.n+'</div>'+
+      '<div class="msg-text">'+d.t+'</div></div></div>';
+  }
+  dl.innerHTML=dh;
+
+  var gp=document.getElementById('rpane-gift');
+  var gh='';
+  for(var j=0;j<gifts.length;j++){
+    var gf=gifts[j];
+    gh+='<div class="gift-item">'+avatar(gf.n,gf.c)+
+      '<div style="flex:1;min-width:0"><div class="msg-name" style="color:'+ucolors[gf.c]+';font-size:10px">'+gf.n+'</div>'+
+      '<div class="gift-name">'+gf.g+'</div></div>'+
+      '<div class="gift-icon">'+gf.g.slice(0,1)+'</div>'+
+      '<div class="gift-count">x'+gf.num+'</div></div>';
+  }
+  gp.innerHTML=gh;
+
+  var ep=document.getElementById('rpane-entry');
+  var eh='';
+  var typeMap={enter:{lbl:'进入',cls:'tag-enter'},follow:{lbl:'关注',cls:'tag-follow'},fan:{lbl:'粉丝团',cls:'tag-fan'}};
+  for(var e=0;e<entries.length;e++){
+    var en=entries[e];
+    var tm=typeMap[en.type];
+    eh+='<div class="entry-item">'+avatar(en.n,en.c)+
+      '<span class="lbl">'+tm.lbl+'</span>'+
+      '<span class="uname">'+en.n+'</span>'+
+      '<span class="tag '+tm.cls+'">+'+tm.lbl+'</span></div>';
+  }
+  ep.innerHTML=eh;
+
+  var rtabs=document.querySelectorAll('.rtab');
+  var rpanes={gift:document.getElementById('rpane-gift'),entry:document.getElementById('rpane-entry')};
+  for(var r=0;r<rtabs.length;r++){
+    rtabs[r].addEventListener('click',function(){
+      var t=this.getAttribute('data-rtab');
+      for(var s=0;s<rtabs.length;s++){rtabs[s].classList.remove('active');}
+      this.classList.add('active');
+      for(var key in rpanes){rpanes[key].classList.remove('active');}
+      rpanes[t].classList.add('active');
+    });
+  }
+
+  var toastEl=document.getElementById('toast');
+  var toastTimer;
+  function toast(msg){
+    toastEl.textContent=msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer=setTimeout(function(){toastEl.classList.remove('show');},2000);
+  }
+
+  var connectBtn=document.getElementById('connectBtn');
+  var roomInput=document.getElementById('roomInput');
+  connectBtn.addEventListener('click',function(){
+    var v=roomInput.value.trim();
+    if(!v){toast('请输入房间号');return;}
+    connectBtn.textContent='连接中';
+    setTimeout(function(){connectBtn.textContent='已连接';toast('已连接房间 '+v);},900);
+  });
+
+  var sheetMask=document.getElementById('sheetMask');
+  var keyBtn=document.getElementById('keyBtn');
+  var sessionInput=document.getElementById('sessionInput');
+  keyBtn.addEventListener('click',function(){
+    sheetMask.classList.add('active');
+    setTimeout(function(){sessionInput.focus();},150);
+  });
+  sheetMask.addEventListener('click',function(e){
+    if(e.target===sheetMask){sheetMask.classList.remove('active');}
+  });
+  document.getElementById('saveSessionBtn').addEventListener('click',function(){
+    var v=sessionInput.value.trim();
+    if(!v){toast('请输入 sessionid');return;}
+    document.getElementById('keyDot').classList.add('ok');
+    sheetMask.classList.remove('active');
+    sessionInput.value='';
+    toast('sessionid 已保存');
+  });
+})();
+</script>
+</body>
+</html>

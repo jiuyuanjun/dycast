@@ -1,0 +1,33 @@
+/* castfont 图标字体 */
+@font-face {
+  font-family: "castfont";
+  src: url('./castfont.ttf') format('truetype');
+}
+
+.ice,
+[class*=' ice-'],
+[class^='ice-'] {
+  font-family: "castfont" !important;
+  font-size: 16px;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.ice-cast:before { content: "\e601"; }
+.ice-data:before { content: "\e6da"; }
+.ice-keya:before { content: "\e6b4"; }
+.ice-key:before { content: "\e66b"; }
+.ice-logout:before { content: "\e66c"; }
+.ice-save:before { content: "\e636"; }
+.ice-stat:before { content: "\e620"; }
+.ice-setting:before { content: "\e771"; }
+.ice-config:before { content: "\e618"; }
+.ice-room-id:before { content: "\e622"; }
+.ice-close:before { content: "\e69a"; }
+.ice-arrow-left-copy:before { content: "\e77d"; }
+.ice-arrow-right-copy:before { content: "\e77e"; }
+.ice-member:before { content: "\e657"; }
+.ice-gift:before { content: "\e651"; }
+.ice-douyin:before { content: "\e667"; }
+.ice-msg:before { content: "\e618"; }

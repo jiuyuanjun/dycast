@@ -1,0 +1,20 @@
+[
+  {
+    "ts": "2026-09-28T02:46:00.729Z",
+    "url": "https://live.douyin.com/webcast/room/chat/?aid=6383&app_name=douyin_web&device_platform=web&language=zh-CN&enter_from=link_share&cookie_enabled=true&screen_width=412&screen_height=915&browser_language=zh-CN&browser_platform=Win32&browser_name=Chrome&browser_version=136.0.0.0&browser_online=true&did_rule=3&endpoint=live_pc&msToken=lSEE6IlbJztVTInk7cSPPmr-IZdV723ayHFwu1mdilxOCk4-kyqxuLZuU%3Dyh1nfSwFRkXn%3DclaON6jJJXfwIqjZGC2uc5izCZrC8SNOsKlMookFwmdu9LqCvJnoJyAn26-FXFM34tsBu4x8U0BUsHUB6crGF%3DArzhekBeD8sNeIXKYlLlSENnlWI&room_id=7690380332310301467&sec_uid=MS4wLjABAAAAeiAQixC6vMiFH0YC7sohN094lCjxGiQstNDu7Z8aL2g&t=1790563560667&webcast_sdk_version=1.0.15&live_id=1&type=0&content=dycast%E6%B5%8B%E8%AF%95%E5%BC%B9%E5%B9%95%E4%BD%A0%E5%A5%BD&a_bogus=xy4RD7tydoQnOdFtuOmXCAClD0I%2FrsuyMpiObPcPGxF8LqzTISPS0Nc2GxF3tSa5pbpihF-HoDMATnVcq0XzpCnkKmZvSQGSwz%2FV96sLhqq6YMXsDHyQCLYFwwBeW5zLe5c6iAW5IssNZDKlINIYAB3G95Pq-Y8pRqZApMz9aDc83syTVnQre3fA57j%3D&a_bogus=Yv4RkHS7mpR5PVKtYCrTy9al0U9MNFuyUlTQScHK7NT-Lqlb9uNy0Nc2jxKPsu54ZbBzhK1HHxzlbxxcZVXs319pKmpvumzfitcc9Umo8qo0Gakh1HLmKGGqKiBYA5uu8QB4xMDXlt%2FP6j%2FlgqBUhAaPo-jPA%2FmBsqnlsFJSTIFkh5T9ZE%3D%3D",
+    "method": "GET",
+    "headers": {
+      "sec-ch-ua-platform": "\"Android\"",
+      "Referer": "https://live.douyin.com/777536083412",
+      "sec-ch-ua": "\"Not(A:Brand\";v=\"99\", \"Android WebView\";v=\"133\", \"Chromium\";v=\"133\"",
+      "bd-ticket-guard-web-version": "2",
+      "sec-ch-ua-mobile": "?1",
+      "bd-ticket-guard-client-data": "eyJ0c19zaWduIjoidHMuMi42YzI1MGI2N2FhZjczZWRhYzUzYWUzZWVlZTA5MGMzMTIzZjllNmM5ZjY1YjJkMzc1OGMxMzQ3MzAwNGNmNGE1YzRmYmU4N2QyMzE5Y2YwNTMxODYyNGNlZGExNDkxMWNhNDA2ZGVkYmViZWRkYjJlMzBmY2U4ZDRmYTAyNTc1ZCIsInJlcV9jb250ZW50IjoidGlja2V0LHBhdGgsdGltZXN0YW1wIiwicmVxX3NpZ24iOiJqVnV5cncwZHh6Q3lqNTZaKzZwcm9qanlsL2FxVUpoeHh4dExuNlozQlpNPSIsInRpbWVzdGFtcCI6MTc5MDU2MzQ3OSwidF90cnVzdCI6MX0=",
+      "bd-ticket-guard-web-sign-type": "1",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
+      "bd-ticket-guard-ree-public-key": "BGhQ6E5XBKQZLZfGnoVqTpu2nrMmdjGkNT90SajpoqT23P+r1DNv3eXzvEbPgbSyX/jllcnl8HtWPyE8Gwg2q+Y=",
+      "bd-ticket-guard-version": "2"
+    },
+    "postData": null
+  }
+]

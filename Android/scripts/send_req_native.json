@@ -1,0 +1,21 @@
+[
+  {
+    "ts": "2026-09-28T02:50:55.272Z",
+    "url": "https://live.douyin.com/webcast/room/chat/?aid=6383&app_name=douyin_web&live_id=1&device_platform=web&language=zh-CN&enter_from=link_share&cookie_enabled=true&screen_width=412&screen_height=915&browser_language=zh-CN&browser_platform=Linux+x86_64&browser_name=Edge&browser_version=136.0.0.0&os_name=Windows&os_version=10&room_id=7690380332310301467&content=%E5%93%88%E5%93%88%E5%93%88&type=0&rtf_content=&paste_edit_method=non_paste&msToken=rwHbpajSr0cPyUWwuq3QzzeGqxtbQwLMsj-WV7sfalM0NXVViztbaMzdaCOWHeurIapcFa96xRNIdkeTJoQmyTvH2EpnkG-Nf-FDaldOD74LCs02bcIDZKmi42ejpViqpFyHrE-v8R1ZIqNYySrrGgj-L0X-I8snPPiU_yhK24_viTWJ9PdcMv0%3D&a_bogus=QX0nk76ymd8Rcd%2FbYCR49eolqhV%2FNF8y-MixWoKK7xFdLwMG1mNbzrCMcxw2sugvqbBwhq37ejtMYEdcNIUw3ArkKmZDuDiRwtn59WmogqLUG-JhrqLDKjGquiBb%2FbSuuQp7xZgXIt8agnClgrpvh1CPq-jOA8bBzqc-sFJSioF2XO4yTj%3D%3D",
+    "method": "GET",
+    "headers": {
+      "sec-ch-ua-platform": "\"Android\"",
+      "Referer": "https://live.douyin.com/777536083412",
+      "sec-ch-ua": "\"Not(A:Brand\";v=\"99\", \"Android WebView\";v=\"133\", \"Chromium\";v=\"133\"",
+      "bd-ticket-guard-web-version": "2",
+      "sec-ch-ua-mobile": "?1",
+      "bd-ticket-guard-client-data": "eyJ0c19zaWduIjoidHMuMi42YzI1MGI2N2FhZjczZWRhYzUzYWUzZWVlZTA5MGMzMTIzZjllNmM5ZjY1YjJkMzc1OGMxMzQ3MzAwNGNmNGE1YzRmYmU4N2QyMzE5Y2YwNTMxODYyNGNlZGExNDkxMWNhNDA2ZGVkYmViZWRkYjJlMzBmY2U4ZDRmYTAyNTc1ZCIsInJlcV9jb250ZW50IjoidGlja2V0LHBhdGgsdGltZXN0YW1wIiwicmVxX3NpZ24iOiJqVnV5cncwZHh6Q3lqNTZaKzZwcm9qanlsL2FxVUpoeHh4dExuNlozQlpNPSIsInRpbWVzdGFtcCI6MTc5MDU2MzQ3OSwidF90cnVzdCI6MX0=",
+      "bd-ticket-guard-web-sign-type": "1",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
+      "Accept": "application/json, text/plain, */*",
+      "bd-ticket-guard-ree-public-key": "BGhQ6E5XBKQZLZfGnoVqTpu2nrMmdjGkNT90SajpoqT23P+r1DNv3eXzvEbPgbSyX/jllcnl8HtWPyE8Gwg2q+Y=",
+      "bd-ticket-guard-version": "2"
+    },
+    "postData": null
+  }
+]

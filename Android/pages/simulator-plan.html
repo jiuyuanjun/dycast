@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DyCast 双视图模拟器方案草图</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 30px 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #eef1f3; color: #1e2732; }
+    h1 { text-align: center; font-size: 18px; margin-bottom: 6px; }
+    .subtitle { text-align: center; font-size: 11px; color: #6b798e; margin-bottom: 24px; }
+    .wrap { max-width: 1400px; margin: 0 auto; }
+    .state-box { background: #fff; border: 1px solid #b2bfc3; border-radius: 8px; padding: 14px; margin-bottom: 20px; }
+    .state-box h3 { margin: 0 0 8px; font-size: 13px; }
+    .state-box code { display: block; background: #f7f6f5; padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.6; color: #2d7dca; }
+    .devices { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; align-items: flex-start; }
+    .device-wrap { display: flex; flex-direction: column; align-items: center; min-width: 320px; }
+    .label { margin-top: 8px; font-size: 12px; color: #6b798e; }
+    .device {
+      border: 6px solid #2a2a2a; border-radius: 24px; overflow: hidden;
+      background: #fff; box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+      position: relative;
+    }
+    .portrait { width: 300px; min-width: 240px; height: 560px; }
+    .landscape { width: 640px; min-width: 400px; height: 360px; }
+    .notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 80px; height: 16px; background: #2a2a2a; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; z-index: 2; }
+    .screen { position: absolute; inset: 12px; top: 28px; border: 1px dashed #b2bfc3; border-radius: 6px; display: flex; flex-direction: column; gap: 6px; padding: 6px; }
+    .header { height: 24px; background: #f7f6f5; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #6b798e; }
+    .body { flex: 1; display: flex; gap: 6px; overflow: hidden; }
+    .col { flex: 1; border: 1px dashed #b2bfc3; border-radius: 4px; padding: 6px; font-size: 9px; color: #6b798e; }
+    .col.narrow { flex: 0 0 90px; }
+    .col.wide { flex: 1.6; }
+    .row { background: #f7f6f5; border-radius: 3px; padding: 4px; margin-bottom: 4px; text-align: center; }
+    .nav { height: 30px; background: #f7f6f5; border-radius: 4px; display: flex; }
+    .nav span { flex: 1; text-align: center; font-size: 8px; line-height: 30px; color: #6b798e; border-right: 1px dashed #b2bfc3; }
+    .nav span:last-child { border-right: none; }
+    .arrow-wrap { display: flex; align-items: center; justify-content: center; padding: 10px 0; font-size: 12px; color: #68be8d; }
+    .legend { margin-top: 20px; background: #fff; border: 1px solid #b2bfc3; border-radius: 8px; padding: 14px; }
+    .legend h3 { margin: 0 0 8px; font-size: 13px; }
+    .legend ul { margin: 0; padding-left: 18px; font-size: 11px; line-height: 1.8; color: #6b798e; }
+  </style>
+</head>
+<body>
+  <h1>DyCast 双视图模拟器方案草图</h1>
+  <p class="subtitle">共享状态对象 · 左右实时同步 · 竖屏操作 ⇄ 横屏自动映射</p>
+
+  <div class="wrap">
+    <div class="state-box">
+      <h3>共享状态（一个 JS 对象，两边同时读取）</h3>
+      <code>
+state = {<br>
+&nbsp;&nbsp;page: 'home' | 'confirm' | 'login' | 'live' | 'more' | 'settings' | 'console' | 'save' | 'switch' | 'webview',<br>
+&nbsp;&nbsp;roomInput: '560402456867',<br>
+&nbsp;&nbsp;isLoggedIn: false,<br>
+&nbsp;&nbsp;liveTab: 'chat' | 'gift' | 'social' | 'data',<br>
+&nbsp;&nbsp;messages: { chat: [], gift: [], social: [], data: {} },<br>
+&nbsp;&nbsp;showLoginModal: false<br>
+}
+      </code>
+    </div>
+
+    <div class="arrow-wrap">← 任意一侧的点击都会修改 state，render(state) 会同时重绘左右两个设备 →</div>
+
+    <div class="devices">
+      <div class="device-wrap">
+        <div class="device portrait">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="header">抖音直播弹幕助手</div>
+            <div class="body" style="flex-direction:column;">
+              <div class="col" style="flex:1;">
+                <div class="row">连接直播间输入框</div>
+                <div class="row">下一步 → 确认主播</div>
+              </div>
+              <div class="col" style="display:none;">确认主播</div>
+              <div class="col" style="display:none;">登录抖音账号</div>
+              <div class="col" style="display:none; flex:1;">
+                <div class="row">弹幕 / 礼物 / 进入关注 / 主播数据</div>
+              </div>
+            </div>
+            <div class="nav"><span>弹幕</span><span>礼物</span><span>进入</span><span>数据</span></div>
+          </div>
+        </div>
+        <div class="label">纯竖屏 · 手机样式</div>
+      </div>
+
+      <div class="device-wrap">
+        <div class="device landscape">
+          <div class="screen" style="top:14px;">
+            <div class="body">
+              <div class="col narrow">
+                <div class="row">直播信息</div>
+                <div class="row">用户卡片</div>
+                <div class="row">计时/状态</div>
+              </div>
+              <div class="col wide">
+                <div class="row" style="flex:1;">弹幕信息</div>
+                <div class="row" style="flex:1;">礼物信息（登录后显示）</div>
+              </div>
+              <div class="col narrow">
+                <div class="row">房间号 & 链接</div>
+                <div class="row" style="flex:1;">进入 & 关注 & 粉丝团</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="label">纯横屏 · 电脑版式三栏</div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <h3>交互同步规则（方案核心）</h3>
+      <ul>
+        <li><strong>单点状态源：</strong>所有 DOM 事件只修改 <code>state</code>，不直接改另一边的 DOM；修改后统一调用 <code>render(state)</code>。</li>
+        <li><strong>页面映射：</strong>竖屏切到“主播数据”时，横屏左/中/右三栏信息同步刷新；竖屏进入“设置/控制台/保存/切换”时，横屏暂时显示对应全屏覆盖层（或右侧弹出面板）。</li>
+        <li><strong>底部导航同步：</strong>竖屏点击“弹幕/礼物/进入/数据”时，横屏对应高亮/滚动到相应面板；反之点击横屏面板的“连接/登录”也同步改变竖屏页面。</li>
+        <li><strong>最小宽度：</strong>竖屏模拟器 <code>min-width: 240px</code>，横屏模拟器 <code>min-width: 400px</code>，保证在窄窗口下不被压扁。</li>
+        <li><strong>下方预览区：</strong>保留所有页面的竖屏卡片，并为每个页面追加横屏版本卡片，确保“所有页面都能显示出来”。</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
