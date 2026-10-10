@@ -17,7 +17,7 @@
   - 签名：Android SDK build-tools（zipalign + apksigner）
   - 调试：adb / emulator / Chrome DevTools Protocol
 - **核心功能**：连接抖音直播间、拉取弹幕/礼物/进入&关注&粉丝团信息、登录抖音账号、横屏三栏直播页。
-- **当前版本**：v1.3.9（发布渠道：GitHub Releases + 飞书，见第 15 节。v1.3.0 为**原生通知后端版**：通知链路下沉 Rust，后台不再依赖 WebView，详见 17.8）
+- **当前版本**：v1.4.0（versionCode 37；发布渠道：GitHub Releases + 飞书，见第 15 节。**强制规则：所有版本更新后必须同步飞书云盘 + GitHub，见第 4 节**。v1.3.0 为**原生通知后端版**：通知链路下沉 Rust，后台不再依赖 WebView，详见 17.8）
 
 ---
 
@@ -85,6 +85,15 @@
 | [src-tauri/gen/android/app/tauri.properties](file:///c:/Users/jiuyuanjun/Desktop/project/dycast/Android/src-tauri/gen/android/app/tauri.properties) | `tauri.android.versionName` / `versionCode` | 同步更新 |
 
 **注意**：`Cargo.lock` 与 `src-tauri/gen/android/app/build` 下的中间产物会在下次构建后自动刷新，无需手动修改。
+
+**⚠️ 强制同步规则（硬性要求，任何版本更新后必须执行）**：所有软件版本更新（APK 正式版、热更新包）发布后，**必须同步到飞书云盘和 GitHub 更新渠道**，缺一不可：
+
+- **GitHub 更新渠道**（App 内"检查更新"依赖，不发布则用户永远收不到新版）：
+  - APK 正式版 → 创建/更新 GitHub Release（`gh release create vX.Y.Z ...`，`build-apk.cjs` 的 `github` 步骤自动完成）
+  - 热更新包 → 创建/更新 `vX.Y.Z-hot` prerelease 并上传 `manifest.json` + 热更文件（清单 URL 见 `HOT_MANIFEST_URL`）
+- **飞书云盘**（人工/通知分发渠道）：`lark-cli drive +upload` 上传到发布文件夹（folder-token `KUWzf6phnlApZSdAwBActyUrnke`），保留"最新 + 1 个回滚版本"。
+
+未同步任何一侧即视为发布未完成，禁止宣称"已发布/已更新"。
 
 ---
 
@@ -493,16 +502,21 @@ node scripts\test-webview.mjs
      ```
    - 产物位于 [output\dycast-android-v{version}-signed.apk](file:///c:/Users/jiuyuanjun/Desktop/project/dycast/Android/output)。
 
-4. **上传到飞书「抖音弹幕助手」**
-   - 确认 `lark-cli` 已登录且具备 `drive:file:upload` 权限：
-     ```powershell
-     lark-cli auth status --json --verify
-     ```
-   - 使用 `lark-cli drive +upload` 上传到目标文件夹：
-     ```powershell
-     lark-cli drive +upload --folder-token KUWzf6phnlApZSdAwBActyUrnke --file 'output\dycast-android-v1.1.1-signed.apk'
-     ```
-   - 上传完成后可通过 `lark-cli drive files list --folder-token KUWzf6phnlApZSdAwBActyUrnke` 确认文件已到达文件夹。
+4. **发布并强制同步两渠道（缺一不可）**
+   - **GitHub 更新渠道**（App 内"检查更新"依赖，不发布则用户收不到新版）：
+     - APK 正式版：创建/更新 GitHub Release，可用 `node scripts/build-apk.cjs --version <x.y.z> --notes "<说明>" --no-upload`（`github` 步骤自动用 gh CLI 创建 Release 并上传 APK，保留 `-hot` 热更 Release）。
+     - 热更新包：生成热更产物并创建 `v<x.y.z>-hot` prerelease 上传（见第 15 节"版本自动更新机制"）。
+   - **飞书云盘**（人工/通知分发渠道）：
+     - 确认 `lark-cli` 已登录且具备 `drive:file:upload` 权限：
+       ```powershell
+       lark-cli auth status --json --verify
+       ```
+     - 使用 `lark-cli drive +upload` 上传到目标文件夹：
+       ```powershell
+       lark-cli drive +upload --folder-token KUWzf6phnlApZSdAwBActyUrnke --file 'output\dycast-android-v1.1.1-signed.apk'
+       ```
+     - 上传完成后可通过 `lark-cli drive files list --folder-token KUWzf6phnlApZSdAwBActyUrnke` 确认文件已到达文件夹；保留"最新 + 1 个回滚版本"。
+   - **未同步任一侧即视为发布未完成**，禁止宣称"已发布/已更新"。
 
 ---
 
@@ -715,7 +729,7 @@ App 启动（4s 后）/ 设置 → 关于 → 检查更新
 - `src-tauri/src/updater.rs`：`fetch_text` / `download_apk`（应用内进度下载）/ `apk_downloaded` / `install_apk` / `start_apk_download`（系统下载兜底）/ `open_unknown_source_settings` 命令
 - `src-tauri/gen/android/app/src/main/java/com/dycast/app/UpdaterHelper.kt`：下载 + 安装拉起
 - `src/utils/updater.ts`：`checkUpdate` / `downloadUpdate` / `compareVersion` / 24h 节流与"暂不"记忆；更新源 `UPDATE_SOURCE`（默认机 jiuyuanjun/dycast）
-- `src/utils/hotUpdate.ts`：热更清单地址 `HOT_MANIFEST_URL`（GitHub raw `public-clean` 分支）
+- `src/utils/hotUpdate.ts`：热更清单地址 `HOT_MANIFEST_URL`（GitHub Releases 资产直链 `releases/download/vX.Y.Z-hot/manifest.json`；**不要用 raw.githubusercontent.com**——国内访问不稳定）
 - `src/components/UpdateDialog.vue`：更新弹窗（App.vue 全局挂载 `<UpdateDialog auto />`，设置页通过 ref 手动触发）
 - AndroidManifest：`REQUEST_INSTALL_PACKAGES` 权限
 
@@ -726,6 +740,7 @@ node scripts/build-apk.cjs --bump --notes "更新说明"   # 推荐（2026-09-17
 # 版本号 4 处同步 → 前端构建 → assets 清空重建 → cargo tauri android build --apk --target aarch64
 # → zipalign+apksigner → 上传 APK 到 GitHub Releases → 飞书上传（保留最新+1 回滚）→ 摘要
 ```
+**强制同步（硬性要求）**：以上流程执行完毕后，**必须确认 APK 已上传 GitHub Release 且热更包已发布 `-hot` Release，同时 APK 已上传飞书发布文件夹**——两渠道缺一不可（详见第 4 节强制同步规则）。未同步任一侧即视为发布未完成。
 
 ### GitHub Releases 发布命令（gh CLI）
 ```bash
@@ -1085,20 +1100,20 @@ gh release create "v1.4.0" Android/output/dycast-1.4.0-arm64.apk --title "v1.4.0
   - v1.1.4：短链解析修复（16.3 两个修复）。
 - **bug 修复记录汇总**：Bug 1~14 见 12 节；Bug 15（保活）见 14 节；Bug 16/17（更新）与 Bug 18（下播弹窗）见 15 节；Bug 19（下播收尾回首页+停保活）与 Bug 20（后台 5 分钟断连修复）见 15 节。
 - **release.ps1 已知修复（2026-09-12）**：versionCode 读取路径 `bundle.android.versionCode`（原 `app.android.versionCode` 恒为 null）；飞书上传文件名改为 `dycast-android-v$Version-signed.apk`（与实际签名产物一致）。**2026-09-17 起发版改用 `scripts/build-apk.cjs`**（见 17.3），release.ps1 仅作备用。
-- Gitee 发布仓库：`jiuyuanjun/dycast`（公开，更新源）；私人令牌：`Android/scripts/gitee-token.txt`（已 gitignore，勿提交勿外泄）。
-- **Gitee Release 现状（2026-10-02 确认）**：正式 `v1.3.6`（latest，prerelease=false，Release id `1179643`，附件 `dycast-1.3.6-arm64.apk`，SHA-256 `2c4ed05dac78c97f19c96f784d0d8491c8f6e3aac1bc306f5048c8f434cd2288`）；仓库仅保留 v1.3.6（发布时已删 v1.3.5）。**应用内自动更新链路正常**（旧版用户启动后 4s 静默检查 → 弹窗 → 进度条下载 → 确认安装）。
-- 飞书发布文件夹（token `KUWzf6phnlApZSdAwBActyUrnke`）：保留至多两版（最新 + 1 历史回滚）。当前：`dycast-1.3.6-arm64.apk`（最新，token `XoTwbs7M4o2lX4xIeXfcq5sWnRd`，链接 https://my.feishu.cn/file/XoTwbs7M4o2lX4xIeXfcq5sWnRd ）+ `dycast-android-v1.3.5-signed.apk`（回滚）。策略=每次上传后按版本号保留最新两版、删更旧（用户已授权自动化）。Gitee 只留最新（更新源）。**上传动作已由 `scripts/build-apk.cjs` 的 upload 步骤自动完成**（含同版本残留清理 + 保留策略 + 状态文件更新）。
+- GitHub 发布仓库：`jiuyuanjun/dycast`（公开，默认分支 `public-clean`；更新源）；凭据用 gh CLI 登录（`gh auth login`，keyring），**无私人令牌文件**。
+- **发布现状（2026-10-10 起，GitHub 渠道）**：正式 `v1.4.0`（latest，prerelease=false，含 APK 资产 `dycast-1.4.0-arm64.apk`）+ 热更 `v1.4.0-hot`（prerelease，含 manifest + 热更文件）；仓库 Releases 只保留最新正式版与各 `-hot` 热更。此前 Gitee 时代的 v1.3.6 等记录仅为历史留存。**应用内自动更新链路正常**（旧版用户启动后 4s 静默检查 → 弹窗 → 进度条下载 → 确认安装）。
+- 飞书发布文件夹（token `KUWzf6phnlApZSdAwBActyUrnke`）：保留至多两版（最新 + 1 历史回滚）。当前：`dycast-1.4.0-arm64.apk`（最新，待上传）+ `dycast-1.3.9-arm64.apk`（回滚，待确认）。策略=每次上传后按版本号保留最新两版、删更旧（用户已授权自动化）。GitHub 只留最新正式版（更新源，`-hot` 热更除外）。**上传动作已由 `scripts/build-apk.cjs` 的 upload 步骤自动完成**（含同版本残留清理 + 保留策略 + 状态文件更新）。
 - **发版方式（2026-09-20 用户明确要求）**：每次修改完成后**自动递增版本号并构建、发布到飞书云盘**，不需要先问、也不使用 Android CLI 做测试安装（`npm run android-dev` / `tauri android dev` 不再作为发版前的验证步骤）。标准命令：`cd Android && node scripts/build-apk.cjs --bump --notes "更新说明"`（`--bump` 自动 patch+1；被中断时用 `--from build` 或 `--from sign` 续跑）。发布完成后把飞书链接发给用户。
 - **已修复：构建出包后脚本无限挂起**（2026-09-20 定位并修复于 `scripts/build-apk.cjs`，完整根因/证据见 [17.7](#177-已修复问题构建出包后脚本无限挂起gradle-daemon-持有-stdio-管道)）。
 - **任务收尾自动上传飞书（2026-09-06 起，用户要求，无定时器）**：AI 会话完成其他任务并确认没问题后，若本次产出/更新了项目根目录的 APK 交付包（SHA-256 与 `.feishu-upload-state.json` 记录不一致），必须作为收尾步骤立即以用户身份上传到本飞书发布文件夹——同名文件覆盖上传（链接不变）、新版本文件名新建上传并删除上一次上传的旧文件（只清 `.feishu-upload-state.json` 里记录的自己的产物，不碰 release.ps1 的 `dycast-android-v*-signed.apk`；用户已授权该保留策略）。注意 `lark-cli` 的 `--file` 只接受相对路径（先 cd 项目根目录）。上传成功后更新 `.feishu-upload-state.json`（fileName/sha256/fileToken/url/folderToken）并把飞书链接发给用户；未产出新 APK 或用户尚未确认结果时不上传。**2026-09-17 起该动作已内建到 `scripts/build-apk.cjs`**，正常发版走程序即可，无需手动上传。最新已上传：`dycast-1.3.1-arm64.apk`（token `Ks76bszXUo0Y7jxXDhYciuSOnLe`）。
 
 ## 17.2 版本自动更新机制（v1.1.3 起生效，v1.1.17 起改为应用内进度下载）
-- 链路：启动 4s 后静默检查（24h 节流，localStorage `dycast_last_update_check`）或 设置→关于→检查更新 → Rust `fetch_text` 抓 `https://gitee.com/api/v5/repos/jiuyuanjun/dycast/releases/latest`（免登录）→ tag_name 与本地版本（`@tauri-apps/api/app` getVersion）semver 比较 → 弹窗「发现新版本」。
+- 链路：启动 4s 后静默检查（24h 节流，localStorage `dycast_last_update_check`）或 设置→关于→检查更新 → Rust `fetch_text` 抓 `https://api.github.com/repos/jiuyuanjun/dycast/releases/latest`（免登录）→ tag_name 与本地版本（`@tauri-apps/api/app` getVersion）semver 比较 → 弹窗「发现新版本」。
 - **下载中（v1.1.17 起）**：点「立即更新」→ Rust `download_apk`（reqwest 流式下载到 `cache/updates/`，每 256KB 经 `update-progress` 事件推送）→ 弹窗内展示进度条（百分比 + 已下载/总大小）。
 - **下载完成**：写入 localStorage `dycast_update_downloaded`（version / path / size / at）→ 弹窗切换「更新包已下载…是否立即安装？」→「立即安装」→ Rust `install_apk` → Kotlin `UpdaterHelper.installApkFromPath`（FileProvider 拉起系统安装器；未授予安装权限先跳「允许安装未知应用」）。
 - **选「稍后安装」**：仅记录本次运行内忽略（`dismissedThisSession`，不写入 localStorage）→ 下次打开 App 仍会弹窗；`fill()` 会先经 Rust `apk_downloaded` 校验缓存 APK 是否仍在，在就直接进入「是否立即安装」（**不重复下载**），被系统清理则清记录后重新下载。
 - **兜底**：应用内下载失败时弹窗提供「改用系统下载（通知栏查看进度）」→ Rust `start_apk_download` → Kotlin `UpdaterHelper.startApkDownload`（系统 DownloadManager + 完成 receiver 自动拉起安装器）。
-- 注意：**Gitee `/releases/latest` 会返回 prerelease**（v1.1.4-test 会被正式用户检测到）。
+- 注意：**GitHub `/releases/latest` 会跳过 prerelease**（v1.1.4-test 这类测试版不会推给正式用户；热更 `-hot` Release 必须标记 prerelease，否则会顶掉正式版 latest）。
 - 关键文件：`src-tauri/src/updater.rs`（`fetch_text` / `download_apk` / `apk_downloaded` / `install_apk` / `start_apk_download` / `open_unknown_source_settings`）、`gen/android/.../UpdaterHelper.kt`、`src/utils/updater.ts`、`src/utils/tauriBridge.ts`、`src/components/UpdateDialog.vue`（App.vue 全局挂载 `<UpdateDialog auto />`）、设置页 MorePage「关于」组。
 
 ## 17.3 发版流程（推荐：一键构建程序 `scripts/build-apk.cjs`）

@@ -19,7 +19,7 @@ use http::{HeaderMap, HeaderValue, Method};
 use reqwest::{cookie::CookieStore, Client};
 use std::{sync::Arc, sync::Mutex, time::Duration};
 use tokio::net::TcpListener;
-use tokio::sync::Mutex as TokioMutex;
+use tokio::sync::{mpsc, Mutex as TokioMutex};
 use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 
@@ -29,12 +29,21 @@ const DY_WS_ORIGIN: &str = "wss://webcast100-ws-web-lq.douyin.com";
 /// PC UA, mirrors the nginx/vite config.
 const PC_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0";
 
+/// 上游 WebSocket 流类型。
+type UpstreamStream =
+    tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
+/// WS 发送通道类型别名（tokio_tungstenite 消息）。
+type WsSender = mpsc::Sender<WsMessage>;
+
 #[derive(Clone)]
 pub struct ProxyState {
     client: Client,
     jar: Arc<reqwest::cookie::Jar>,
     /// Manually configured Douyin `sessionid` cookie, shared with the frontend.
     sessionid: Arc<Mutex<Option<String>>>,
+    /// 当前活动上游连接（按 target 键）的发送通道。
+    /// 上游断开/重连期间为空；c2u 用它把前端帧转发给上游。
+    upstream_senders: Arc<Mutex<std::collections::HashMap<String, WsSender>>>,
 }
 
 impl ProxyState {
@@ -47,6 +56,28 @@ impl ProxyState {
 
     pub(crate) fn sessionid_cookie(&self) -> Option<String> {
         self.sessionid.lock().ok().and_then(|s| s.clone())
+    }
+
+    /// 注册一条活动上游连接的发送通道（重连/断开时移除）。
+    pub fn set_upstream_sender(&self, target: &str, sender: WsSender) {
+        if let Ok(mut map) = self.upstream_senders.lock() {
+            map.insert(target.to_string(), sender);
+        }
+    }
+
+    /// 取当前活动上游的发送通道；无（重连中/未连接）返回 None。
+    pub fn upstream_sender(&self, target: &str) -> Option<WsSender> {
+        self.upstream_senders
+            .lock()
+            .ok()
+            .and_then(|m| m.get(target).cloned())
+    }
+
+    /// 移除（上游断开时调用）。
+    pub fn remove_upstream_sender(&self, target: &str) {
+        if let Ok(mut map) = self.upstream_senders.lock() {
+            map.remove(target);
+        }
     }
 
     /// Warm up the cookie jar by visiting Douyin with the given sessionid so the
@@ -100,6 +131,7 @@ pub fn start_proxy_server() -> anyhow::Result<(tokio::task::JoinHandle<()>, u16,
         client,
         jar,
         sessionid: Arc::new(Mutex::new(None)),
+        upstream_senders: Arc::new(Mutex::new(std::collections::HashMap::new())),
     };
     let state_for_server = state.clone();
     // CORS: frontend runs on tauri.localhost, proxy on 127.0.0.1:PORT,
@@ -331,15 +363,203 @@ async fn proxy_ws_handler(
     })
 }
 
+/// 本地 WS（前端↔代理）与上游 WS（代理↔抖音）解耦：
+/// - 本地 WS 的生命周期由前端控制（前端连接/断开，split 一次）；
+/// - 上游 WS 由 Rust 独立管理：断开后自动重连（退避 1s→30s），期间向前端发 `reconnecting`
+///   事件（重置其心跳计数，避免前端因收不到消息而误判"无法接收"自行重连）；
+/// - 重连成功后恢复推流，前端全程无感知（无需重新走 WebSocket 握手）。
 async fn forward_ws(
     state: ProxyState,
     target: String,
     client_ws: axum::extract::ws::WebSocket,
 ) -> anyhow::Result<()> {
-    use tokio_tungstenite::connect_async;
+    let (mut client_sender, mut client_receiver) = client_ws.split();
+    // 前端要收的帧队列（有界）：u2c / reconnecting 事件都从这里 → 转发协程 → 前端。
+    // 队列满时丢弃（WebView 未消费），保证原生通知/ack 不被前端背压饿死。
+    let (client_tx, mut client_rx) =
+        tokio::sync::mpsc::channel::<axum::extract::ws::Message>(256);
+    let forwarder = tokio::spawn(async move {
+        while let Some(m) = client_rx.recv().await {
+            if client_sender.send(m).await.is_err() {
+                break;
+            }
+        }
+    });
+
+    // 上游自动重连循环（独立 task）：上游断连自动重连，前端本地 WS 保持。
+    let up_task = tokio::spawn(upstream_reconnect_loop(
+        state.clone(),
+        target.clone(),
+        client_tx.clone(),
+    ));
+
+    // c2u：读前端帧 → 投递给当前上游（经 state 共享发送槽）。前端本地 WS 关闭 → 结束。
+    while let Some(msg) = client_receiver.next().await {
+        let msg = match msg {
+            Ok(m) => m,
+            Err(e) => {
+                log::warn!("读取前端 WS 帧失败: {e}");
+                break;
+            }
+        };
+        if let Some(sender) = state.upstream_sender(&target) {
+            let m = match msg {
+                axum::extract::ws::Message::Text(t) => WsMessage::Text(t.to_string()),
+                axum::extract::ws::Message::Binary(b) => WsMessage::Binary(b.to_vec()),
+                axum::extract::ws::Message::Ping(b) => WsMessage::Ping(b),
+                axum::extract::ws::Message::Pong(b) => WsMessage::Pong(b),
+                axum::extract::ws::Message::Close(c) => WsMessage::Close(c.map(|c| {
+                    tokio_tungstenite::tungstenite::protocol::CloseFrame {
+                        code: c.code.into(),
+                        reason: c.reason.to_string().into(),
+                    }
+                })),
+            };
+            // 队列满则丢弃（前端发帧低频，短暂重连期可接受）
+            let _ = sender.try_send(m);
+        }
+        // 无上游（重连中）：丢弃前端帧（弹幕发送低频，短暂不可用可接受）
+    }
+
+    up_task.abort();
+    forwarder.abort();
+    Ok(())
+}
+
+/// 上游自动重连循环。
+/// 连接上游 → 注册发送通道到 state → 跑 u2c（解码/通知/ack/推前端）→ 上游断 → 清槽 + 发
+/// reconnecting → 退避重连。
+async fn upstream_reconnect_loop(
+    state: ProxyState,
+    target: String,
+    client_tx: tokio::sync::mpsc::Sender<axum::extract::ws::Message>,
+) {
+    let mut attempt: u32 = 0;
+    loop {
+        match connect_upstream(&state, &target).await {
+            Err(e) => {
+                log::warn!("上游连接失败（第 {} 次）: {e}", attempt + 1);
+                attempt += 1;
+                // 通知前端"重连中"（重置其心跳计数，避免误判）
+                let _ = client_tx.try_send(axum::extract::ws::Message::Text(
+                    r#"{"type":"dycast","kind":"reconnecting"}"#.into(),
+                ));
+                tokio::time::sleep(reconnect_delay(attempt)).await;
+                continue;
+            }
+            Ok(upstream) => {
+                attempt = 0;
+                log::info!("上游连接成功，开始转发");
+                let _ = run_upstream(&state, &target, upstream, client_tx.clone()).await;
+                log::warn!("上游连接已断开，进入自动重连");
+                state.remove_upstream_sender(&target);
+                let _ = client_tx.try_send(axum::extract::ws::Message::Text(
+                    r#"{"type":"dycast","kind":"reconnecting"}"#.into(),
+                ));
+            }
+        }
+    }
+}
+
+/// 运行一条上游连接：注册发送通道 → 读上游（解码/通知/ack/推前端）。返回表示连接结束。
+async fn run_upstream(
+    state: &ProxyState,
+    target: &str,
+    upstream: UpstreamStream,
+    client_tx: tokio::sync::mpsc::Sender<axum::extract::ws::Message>,
+) -> anyhow::Result<()> {
+    use tokio_tungstenite::tungstenite::Message as WsMessage;
+
+    let (up_write, mut up_read) = upstream.split();
+    let up_write = Arc::new(TokioMutex::new(up_write));
+
+    // 上游心跳：15s Ping 保活（前端后台可能冻结，Rust 兜底）
+    const WS_HEARTBEAT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(15);
+    let heartbeat_up = Arc::clone(&up_write);
+    let heartbeat_task = tokio::spawn(async move {
+        let mut interval = tokio::time::interval(WS_HEARTBEAT_INTERVAL);
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        interval.tick().await; // 跳过首个立即 tick
+        loop {
+            interval.tick().await;
+            if heartbeat_up.lock().await.send(WsMessage::Ping(Vec::new())).await.is_err() {
+                break;
+            }
+        }
+    });
+
+    // 注册发送通道（c2u 用它转发前端帧）
+    let (send_tx, mut send_rx) = mpsc::channel::<WsMessage>(64);
+    state.set_upstream_sender(target, send_tx.clone());
+
+    // 发送协程：把 c2u 投递的帧（含前端 hb/ack）写上游
+    let up_write_send = Arc::clone(&up_write);
+    let send_task = tokio::spawn(async move {
+        while let Some(m) = send_rx.recv().await {
+            if up_write_send.lock().await.send(m).await.is_err() {
+                break;
+            }
+        }
+    });
+
+    // u2c：读上游 → 统一解码 → 后台通知 + ack + 推前端
+    loop {
+        let Some(msg) = up_read.next().await else { break };
+        let msg = match msg {
+            Ok(m) => m,
+            Err(e) => {
+                log::warn!("读取上游帧失败: {e}");
+                break;
+            }
+        };
+        if let WsMessage::Binary(ref b) = msg {
+            if let Some(ev) = crate::webcast_message::decode_frame(b) {
+                // 1) 后台原生通知消费统一消息
+                crate::notify_backend::on_event(&ev);
+                // 2) ACK 统一由 Rust 回上游
+                if ev.need_ack {
+                    let ack = crate::webcast_message::build_ack_frame(ev.log_id, &ev.internal_ext);
+                    if up_write.lock().await.send(WsMessage::Binary(ack.into())).await.is_err() {
+                        break;
+                    }
+                }
+                // 3) 把统一消息序列化为 JSON 事件推给前端；队列满时丢弃
+                let json = crate::webcast_message::event_to_json(&ev);
+                let _ = client_tx.try_send(axum::extract::ws::Message::Text(json));
+                continue;
+            }
+        }
+        // 非 msg 帧 / 无法解码：原样透传
+        let m = match msg {
+            WsMessage::Text(t) => axum::extract::ws::Message::Text(t.into()),
+            WsMessage::Binary(b) => axum::extract::ws::Message::Binary(b.into()),
+            WsMessage::Ping(b) => axum::extract::ws::Message::Ping(b),
+            WsMessage::Pong(b) => axum::extract::ws::Message::Pong(b),
+            WsMessage::Close(c) => {
+                let cf = c.map(|cf| axum::extract::ws::CloseFrame {
+                    code: cf.code.into(),
+                    reason: cf.reason.to_string().into(),
+                });
+                log::warn!("上游关闭帧 => code={:?}", cf.as_ref().map(|f| f.code));
+                axum::extract::ws::Message::Close(cf)
+            }
+            _ => continue,
+        };
+        let _ = client_tx.try_send(m);
+    }
+    heartbeat_task.abort();
+    send_task.abort();
+    state.remove_upstream_sender(target);
+    Ok(())
+}
+
+/// 上游 WebSocket 连接：连一次。失败返回 Err（调用方决定重试）。
+async fn connect_upstream(state: &ProxyState, target: &str) -> Result<UpstreamStream, String> {
     use tokio_tungstenite::tungstenite::handshake::client::generate_key;
 
-    let target_url: url::Url = target.parse().map_err(|e| anyhow::anyhow!("WebSocket 目标地址无效: {e}"))?;
+    let target_url: url::Url = target
+        .parse()
+        .map_err(|e| format!("WebSocket 目标地址无效: {e}"))?;
     // Gather cookies valid for the WS host AND for the HTTP origin. Some Douyin cookies
     // are scoped to live.douyin.com but are still expected on the WS handshake.
     let http_origin: url::Url = DY_HTTP_ORIGIN.parse().expect("有效的 HTTP 来源地址");
@@ -375,7 +595,7 @@ async fn forward_ws(
     };
 
     let mut req = http::Request::builder()
-        .uri(&target)
+        .uri(target)
         .method("GET")
         .header("User-Agent", PC_UA)
         .header("Origin", "https://live.douyin.com")
@@ -394,148 +614,21 @@ async fn forward_ws(
 
     let req = req
         .body(())
-        .map_err(|e| anyhow::anyhow!("构建 WebSocket 请求失败: {e}"))?;
+        .map_err(|e| format!("构建 WebSocket 请求失败: {e}"))?;
 
     log::info!("转发 WebSocket 上游握手，目标: {target}");
-    let (upstream, upstream_res) = match connect_async(req).await {
-        Ok(v) => v,
-        Err(e) => {
-            log::warn!("WebSocket 上游连接失败，目标: {target}，错误: {e}");
-            return Err(anyhow::anyhow!("上游连接失败: {e}"));
-        }
-    };
+    let (upstream, upstream_res) = tokio_tungstenite::connect_async(req)
+        .await
+        .map_err(|e| format!("上游连接失败: {e}"))?;
     log::info!(
         "转发 WebSocket 上游已连接，状态: {}",
         upstream_res.status()
     );
+    Ok(upstream)
+}
 
-    let (up_write, mut up_read) = upstream.split();
-    let (mut client_sender, mut client_receiver) = client_ws.split();
-    // v1.3.0：up_write 需被 c2u（心跳 / 客户端转发）与 u2c（原生通知后端回 ack）共享，
-    // 包一层 Arc<tokio::Mutex>。
-    let up_write = Arc::new(TokioMutex::new(up_write));
-    let up_write_c2u = Arc::clone(&up_write);
-
-    // 上游心跳间隔：15s。抖音 WebSocket 若长时间无数据会被服务端判定失联并断开
-    // （实测约 5 分钟空闲即断）。前端 JS 在后台可能被 WebView 冻结，无法发心跳，
-    // 因此由 Rust 代理统一兜底发送 WS Ping 帧保持连接活跃。
-    const WS_HEARTBEAT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(15);
-
-    let c2u = async {
-        let mut heartbeat = tokio::time::interval(WS_HEARTBEAT_INTERVAL);
-        heartbeat.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-        let mut first = true;
-        loop {
-            tokio::select! {
-                _ = heartbeat.tick() => {
-                    if first { first = false; continue; }
-                    // 向前端 WebView 也发 Ping（保持本地 WS 活跃），再向上游发 Ping
-                    if up_write_c2u.lock().await.send(WsMessage::Ping(Vec::new())).await.is_err() {
-                        break;
-                    }
-                }
-                msg = client_receiver.next() => {
-                    let msg = match msg {
-                        Some(Ok(m)) => m,
-                        _ => break,
-                    };
-                    let m = match msg {
-                        axum::extract::ws::Message::Text(t) => WsMessage::Text(t.to_string()),
-                        axum::extract::ws::Message::Binary(b) => WsMessage::Binary(b.to_vec()),
-                        axum::extract::ws::Message::Ping(b) => WsMessage::Ping(b),
-                        axum::extract::ws::Message::Pong(b) => WsMessage::Pong(b),
-                        axum::extract::ws::Message::Close(c) => WsMessage::Close(c.map(|c| {
-                            tokio_tungstenite::tungstenite::protocol::CloseFrame {
-                                code: c.code.into(),
-                                reason: c.reason.to_string().into(),
-                            }
-                        })),
-                    };
-                    if up_write_c2u.lock().await.send(m).await.is_err() {
-                        break;
-                    }
-                }
-            }
-        }
-    };
-
-    // 转发给 WebView 与"原生通知/ack"解耦（否则后台 WebView 冻结不排空本地 WS 时，
-    // `client_sender.send(...).await` 会被 TCP 背压无限阻塞，把同循环里的原生链路一起饿死，
-    // 表现为"后台约 2 分钟收不到弹幕/通知"。改为有界队列 + 独立转发协程，队列满即丢帧，只保证原生不阻塞）。
-    let (client_tx, mut client_rx) =
-        tokio::sync::mpsc::channel::<axum::extract::ws::Message>(256);
-    let forwarder = tokio::spawn(async move {
-        while let Some(m) = client_rx.recv().await {
-            if client_sender.send(m).await.is_err() {
-                break;
-            }
-        }
-    });
-
-    let u2c = async {
-        while let Some(Ok(msg)) = up_read.next().await {
-            // v1.3.4：统一协议链路 —— proxy 统一解包 PushFrame/gzip/Response/Message，
-            // 前台页面与后台通知都消费同一份标准消息，不再各自解析原始抖音 protobuf。
-            if let WsMessage::Binary(ref b) = msg {
-                if let Some(ev) = crate::webcast_message::decode_frame(b) {
-                    // 1) 后台原生通知消费统一消息（前台由 WebView 经下方 JSON 事件消费）
-                    crate::notify_backend::on_event(&ev);
-                    // 2) ACK 统一由 Rust 回上游（前台/后台一致，避免后台冻结造成 ACK 不一致）
-                    if ev.need_ack {
-                        let ack =
-                            crate::webcast_message::build_ack_frame(ev.log_id, &ev.internal_ext);
-                        if up_write
-                            .lock()
-                            .await
-                            .send(WsMessage::Binary(ack.into()))
-                            .await
-                            .is_err()
-                        {
-                            break;
-                        }
-                    }
-                    // 3) 把统一消息序列化为 JSON 事件发给 WebView；不在转发原始二进制。
-                    //    队列满时丢帧（WebView 未消费），原生通知/ack 已在上方完成。
-                    let json = crate::webcast_message::event_to_json(&ev);
-                    let _ = client_tx.try_send(axum::extract::ws::Message::Text(json));
-                    continue;
-                }
-                // 非 msg 帧（hb/ack/close）或无法解码：走下方旧逻辑原样转发，
-                // 由前端兼容层继续按旧路径处理（保持原始二进制兼容）。
-            }
-            if let WsMessage::Close(ref cf) = msg {
-                if let Some(cf) = cf {
-                    log::warn!(
-                        "转发 WebSocket 上游关闭帧 => 代码: {}, 原因: {}",
-                        cf.code,
-                        cf.reason
-                    );
-                } else {
-                    log::warn!("转发 WebSocket 上游关闭帧缺少代码");
-                }
-            }
-            let m = match msg {
-                WsMessage::Text(t) => axum::extract::ws::Message::Text(t.into()),
-                WsMessage::Binary(b) => axum::extract::ws::Message::Binary(b.into()),
-                WsMessage::Ping(b) => axum::extract::ws::Message::Ping(b),
-                WsMessage::Pong(b) => axum::extract::ws::Message::Pong(b),
-                WsMessage::Close(c) => axum::extract::ws::Message::Close(c.map(|cf| {
-                    axum::extract::ws::CloseFrame {
-                        code: cf.code.into(),
-                        reason: cf.reason.to_string().into(),
-                    }
-                })),
-                _ => continue,
-            };
-            // 非阻塞入队：WebView 未消费导致队列满时丢弃该帧转发。
-            let _ = client_tx.try_send(m);
-        }
-    };
-
-    tokio::select! {
-        _ = c2u => {},
-        _ = u2c => {},
-    }
-    forwarder.abort();
-    Ok(())
+/// 上游重连退避：1s → 2s → 4s → 8s → 16s → 30s 封顶。
+fn reconnect_delay(attempt: u32) -> Duration {
+    let secs = 1u64 << attempt.min(5);
+    Duration::from_secs(secs.min(30))
 }

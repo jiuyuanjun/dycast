@@ -708,6 +708,12 @@ export class DyCast {
     if (typeof data === 'string') {
       try {
         const event = JSON.parse(data);
+        // Rust 上游自动重连中：仅重置心跳计数（防误判"无法接收消息"），连接保持、不触发任何断开。
+        // 重连成功后 Rust 会继续推流，前端无感知。
+        if (event?.type === 'dycast' && event?.kind === 'reconnecting') {
+          CLog.info('[DyCast] Rust 上游重连中（本地连接保持）');
+          return;
+        }
         if (event?.type === 'dycast' && Array.isArray(event.messages)) {
           this.setCursor(String(event.cursor || ''), String(event.internalExt || ''));
           const messages: DyMessage[] = event.messages
