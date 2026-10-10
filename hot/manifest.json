@@ -4,27 +4,27 @@
   "files": [
     {
       "path": "assets/app-icon-CWrvfR_1.png",
-      "url": "https://raw.githubusercontent.com/jiuyuanjun/dycast/public-clean/hot/1.4.0.1/assets/app-icon-CWrvfR_1.png"
+      "url": "https://github.com/jiuyuanjun/dycast/releases/download/v1.4.0-hot/assets/app-icon-CWrvfR_1.png"
     },
     {
       "path": "assets/castfont-darsidzm.ttf",
-      "url": "https://raw.githubusercontent.com/jiuyuanjun/dycast/public-clean/hot/1.4.0.1/assets/castfont-darsidzm.ttf"
+      "url": "https://github.com/jiuyuanjun/dycast/releases/download/v1.4.0-hot/assets/castfont-darsidzm.ttf"
     },
     {
       "path": "assets/event-Bi4Hapli.js",
-      "url": "https://raw.githubusercontent.com/jiuyuanjun/dycast/public-clean/hot/1.4.0.1/assets/event-Bi4Hapli.js"
+      "url": "https://github.com/jiuyuanjun/dycast/releases/download/v1.4.0-hot/assets/event-Bi4Hapli.js"
     },
     {
       "path": "assets/index-BSKcKnuR.css",
-      "url": "https://raw.githubusercontent.com/jiuyuanjun/dycast/public-clean/hot/1.4.0.1/assets/index-BSKcKnuR.css"
+      "url": "https://github.com/jiuyuanjun/dycast/releases/download/v1.4.0-hot/assets/index-BSKcKnuR.css"
     },
     {
       "path": "assets/index-BdH4Bgvw.js",
-      "url": "https://raw.githubusercontent.com/jiuyuanjun/dycast/public-clean/hot/1.4.0.1/assets/index-BdH4Bgvw.js"
+      "url": "https://github.com/jiuyuanjun/dycast/releases/download/v1.4.0-hot/assets/index-BdH4Bgvw.js"
     },
     {
       "path": "index.html",
-      "url": "https://raw.githubusercontent.com/jiuyuanjun/dycast/public-clean/hot/1.4.0.1/index.html"
+      "url": "https://github.com/jiuyuanjun/dycast/releases/download/v1.4.0-hot/index.html"
     }
   ]
 }
