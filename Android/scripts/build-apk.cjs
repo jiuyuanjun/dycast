@@ -3,7 +3,7 @@
  * ============================================================================
  * DyCast Android 一键构建 + 发布程序（健壮版）
  * ============================================================================
- * 目的：把「构建最新 APK → 签名 → 发布（Gitee / 飞书）」固化成一条稳定命令，
+ * 目的：把「构建最新 APK → 签名 → 发布（GitHub / 飞书）」固化成一条稳定命令，
  *      任何一步失败都给出**可定位的明确报错 + 日志文件**，不再出现"莫名其妙的异常"。
  *
  * 用法（在 Android/ 目录下执行）：
@@ -14,7 +14,7 @@
  *   node scripts/build-apk.cjs --from sign          # 断点续跑：从签名步骤开始
  *   node scripts/build-apk.cjs --only upload        # 只跑上传步骤
  *   node scripts/build-apk.cjs --no-upload          # 只构建签名，不上传飞书
- *   node scripts/build-apk.cjs --no-gitee           # 跳过 Gitee Release
+ *   node scripts/build-apk.cjs --no-github          # 跳过 GitHub Release
  *   node scripts/build-apk.cjs --keep-stale         # 不清理残留 cargo/rustc 进程
  *   node scripts/build-apk.cjs --help
  *
@@ -25,7 +25,7 @@
  *   assets     清空并同步 dist → gen/android/.../assets，做文件集合一致性校验（防 stale assets）
  *   build      cargo tauri android build --apk（日志落盘），校验产物新鲜度 + 内嵌 JS 与 dist 一致
  *   sign       zipalign + apksigner 签名（调用 scripts/sign-apk.cjs）并验签
- *   gitee      创建 Gitee Release 并上传 APK，删除旧 Release（仅保留最新）
+ *   github     创建 GitHub Release 并上传 APK（gh CLI），删除旧 Release（仅保留最新）
  *   upload     上传飞书云盘 + 保留"最新 + 1 个回滚版本" + 更新 .feishu-upload-state.json
  *
  * 退出码：0 成功；非 0 失败（1 通用失败，2 校验不通过，3 环境缺失）
@@ -60,20 +60,23 @@ const LARK_RUN = path.join(
 );
 const STATE_FILE = path.join(REPO_ROOT, '.feishu-upload-state.json');
 const FEISHU_FOLDER_TOKEN = 'KUWzf6phnlApZSdAwBActyUrnke';
-const GITEE_REPO = 'jiuyuanjun/dycast';
-const GITEE_TOKEN_FILE = path.join(ROOT, 'scripts/gitee-token.txt');
+/** GitHub 公开仓库（发布源；默认分支 public-clean） */
+const GITHUB_REPO = 'jiuyuanjun/dycast';
+const GITHUB_BRANCH = 'public-clean';
+/** gh CLI 路径（Windows 安装于 Program Files\GitHub CLI） */
+const GH = 'C:/Program Files/GitHub CLI/gh.exe';
 const NPM = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
 /** 会被本程序接管（清空后由 dist 覆盖）的 assets 条目；其余（如 tauri.conf.json）不动 */
 const MANAGED_ASSETS = ['index.html', 'assets', 'mssdk.js'];
 
-const STEPS = ['preflight', 'version', 'frontend', 'assets', 'build', 'sign', 'gitee', 'upload'];
+const STEPS = ['preflight', 'version', 'frontend', 'assets', 'build', 'sign', 'github', 'upload'];
 
 // ───────────────────────────── 参数解析 ─────────────────────────────
 function parseArgs(argv) {
   const o = {
     version: '', bump: false, notes: '', from: '', only: '',
-    upload: true, gitee: true, keepStale: false, universal: false, help: false,
+    upload: true, github: true, keepStale: false, universal: false, help: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -85,7 +88,7 @@ function parseArgs(argv) {
       case '--from': o.from = next(); break;
       case '--only': o.only = next(); break;
       case '--no-upload': o.upload = false; break;
-      case '--no-gitee': o.gitee = false; break;
+      case '--no-github': o.github = false; break;
       case '--keep-stale': o.keepStale = true; break;
       case '--universal': o.universal = true; break;
       case '-h': case '--help': o.help = true; break;
@@ -295,8 +298,8 @@ async function stepPreflight(ctx) {
 
   // 删除旧 release APK，便于用 mtime 判定"本次构建真的产出了新包"；
   // 若删除失败说明存在文件锁 → 直接给出明确指引
-  const skipClean = ['sign', 'gitee', 'upload'].includes(ctx.opt.only)
-    || ['sign', 'gitee', 'upload'].includes(ctx.opt.from);
+  const skipClean = ['sign', 'github', 'upload'].includes(ctx.opt.only)
+    || ['sign', 'github', 'upload'].includes(ctx.opt.from);
   if (!skipClean) {
     for (const p of listReleaseApks()) {
       try { fs.rmSync(p, { force: true }); info(`已删除旧 release APK：${path.basename(p)}`); }
@@ -498,63 +501,50 @@ async function stepSign(ctx) {
   info(`  size=${fs.statSync(ctx.signedApk).size} bytes  sha256=${ctx.sha256}`);
 }
 
-async function stepGitee(ctx) {
-  step('7/8 gitee：发布 Release（仅保留最新）');
-  if (!exists(GITEE_TOKEN_FILE)) {
-    warn(`未找到 Gitee token（${GITEE_TOKEN_FILE}），跳过 Gitee 发布`);
+async function stepGitHub(ctx) {
+  step('7/8 github：发布 GitHub Release（仅保留最新）');
+  if (!fs.existsSync(GH)) {
+    warn(`未找到 gh CLI（${GH}），跳过 GitHub 发布；可先安装 GitHub CLI 或用 --no-github 跳过`);
     return;
   }
-  const token = fs.readFileSync(GITEE_TOKEN_FILE, 'utf8').trim();
-  const api = 'https://gitee.com/api/v5';
   const notes = ctx.opt.notes || `DyCast Android v${ctx.version}`;
+  const tag = `v${ctx.version}`;
+  const apkName = path.basename(ctx.signedApk);
 
-  // 删除旧 Release（除本次 tag 外），保证 /releases/latest 指向本次版本
+  // 删除同 tag 旧 Release（重新发布同版本时覆盖），保证 /releases/latest 指向本次版本
   try {
-    const list = await (await fetch(`${api}/repos/${GITEE_REPO}/releases?access_token=${token}&per_page=100`)).json();
-    for (const rel of (Array.isArray(list) ? list : [])) {
-      if (rel.tag_name === `v${ctx.version}`) {
-        await fetch(`${api}/repos/${GITEE_REPO}/releases/${rel.id}?access_token=${token}`, { method: 'DELETE' });
-        info(`已删除同版本旧 Release：${rel.tag_name}`);
-      }
-    }
-  } catch (e) { warn(`旧 Release 查询失败（继续）：${e.message}`); }
+    sh(GH, ['release', 'view', tag, '--repo', GITHUB_REPO, '--json', 'tagName', '--jq', '.tagName']);
+    // 上一步未抛错 = Release 已存在 → 删除后重建
+    sh(GH, ['release', 'delete', tag, '--repo', GITHUB_REPO, '--yes']);
+    info(`已删除同版本旧 Release：${tag}`);
+  } catch (e) { /* Release 不存在则忽略 */ }
 
-  const body = new URLSearchParams({
-    access_token: token, tag_name: `v${ctx.version}`, name: `v${ctx.version}`,
-    body: notes, target_commitish: 'master', prerelease: 'false',
-  });
-  const res = await fetch(`${api}/repos/${GITEE_REPO}/releases`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body,
-  });
-  const rel = await res.json();
-  if (!rel || !rel.id) die(`创建 Gitee Release 失败：${JSON.stringify(rel).slice(0, 300)}`, 1);
-  info(`Release 已创建 id=${rel.id} tag=v${ctx.version}`);
-
-  // Gitee 上传附件必须 multipart/form-data。
-  // 用 node 原生 fetch + FormData 上传（本机沙箱会锁 System32 的 curl.exe 抛 EBUSY，改用 node 彻底绕开）
-  const apkBuf = fs.readFileSync(ctx.signedApk);
-  const fd = new FormData();
-  fd.append('file', new Blob([apkBuf], { type: 'application/octet-stream' }), path.basename(ctx.signedApk));
-  const upRes = await fetch(
-    `${api}/repos/${GITEE_REPO}/releases/${rel.id}/attach_files?access_token=${token}`,
-    { method: 'POST', body: fd }
-  );
-  const up = await upRes.text();
-  if (!/browser_download_url/.test(up)) warn(`Gitee 附件上传返回异常（HTTP ${upRes.status}）：${String(up).slice(0, 200)}`);
-  else ok('Gitee APK 已上传');
-
-  // 清理其它旧 Release
+  // 创建 Release 并上传 APK（gh 会自动推 tag 到目标分支）
   try {
-    const list = await (await fetch(`${api}/repos/${GITEE_REPO}/releases?access_token=${token}&per_page=100`)).json();
-    for (const r2 of (Array.isArray(list) ? list : [])) {
-      if (r2.id === rel.id) continue;
-      await fetch(`${api}/repos/${GITEE_REPO}/releases/${r2.id}?access_token=${token}`, { method: 'DELETE' });
-      info(`已删除旧 Release：${r2.tag_name}`);
+    sh(GH, [
+      'release', 'create', tag, ctx.signedApk,
+      '--repo', GITHUB_REPO,
+      '--target', GITHUB_BRANCH,
+      '--title', tag,
+      '--notes', notes,
+    ]);
+  } catch (e) {
+    // 若同 tag 已存在但上一步 view 也失败（如网络），这里再兜底尝试 --clobber 语义：报明确错误
+    die(`创建 GitHub Release 失败：${e.message || e}`, 1);
+  }
+  ctx.githubUrl = `https://github.com/${GITHUB_REPO}/releases/tag/${tag}`;
+  ok(`GitHub Release 已发布：${ctx.githubUrl}（APK: ${apkName}）`);
+
+  // 清理其它旧 Release（保留本次 + 所有 -hot 热更 Release，保证 latest 指向最新 APK 版本）
+  try {
+    const listRaw = sh(GH, ['release', 'list', '--repo', GITHUB_REPO, '--limit', '50', '--json', 'tagName', '--jq', '[.[].tagName]']);
+    const list = JSON.parse(listRaw || '[]');
+    for (const oldTag of list) {
+      if (oldTag === tag || oldTag.endsWith('-hot')) continue;
+      sh(GH, ['release', 'delete', oldTag, '--repo', GITHUB_REPO, '--yes']);
+      info(`已删除旧 Release：${oldTag}`);
     }
   } catch (e) { warn(`旧 Release 清理跳过：${e.message}`); }
-  ctx.giteeUrl = `https://gitee.com/${GITEE_REPO}/releases/latest`;
 }
 
 function lark(args, cwd) {
@@ -658,11 +648,11 @@ DyCast Android 一键构建 + 发布程序
 选项：
   --version <x.y.z>   指定版本号（默认沿用 package.json 当前版本）
   --bump              patch 号 +1
-  --notes "<文本>"    更新说明（写入 Gitee Release 与飞书状态文件）
+  --notes "<文本>"    更新说明（写入 GitHub Release 与飞书状态文件）
   --from <step>       从指定步骤开始续跑
   --only <step>       只执行指定步骤
   --no-upload         跳过飞书上传
-  --no-gitee          跳过 Gitee Release
+  --no-github         跳过 GitHub Release
   --keep-stale        不清理残留 cargo/rustc 进程
   --universal         构建全架构 universal 包（默认只构建 arm64 单架构，约 30MB）
   -h, --help          显示本帮助
@@ -686,7 +676,7 @@ DyCast Android 一键构建 + 发布程序
   if (opt.only) plan = [opt.only];
   else if (opt.from) plan = STEPS.slice(STEPS.indexOf(opt.from));
   if (!opt.upload) plan = plan.filter(s => s !== 'upload');
-  if (!opt.gitee) plan = plan.filter(s => s !== 'gitee');
+  if (!opt.github) plan = plan.filter(s => s !== 'github');
 
   const version = opt.version || (() => { try { return readVersion(); } catch { return 'unknown'; } })();
   if (!exists(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
@@ -703,7 +693,7 @@ DyCast Android 一键构建 + 发布程序
   const t0 = Date.now();
   const impl = {
     preflight: stepPreflight, version: stepVersion, frontend: stepFrontend,
-    assets: stepAssets, build: stepBuild, sign: stepSign, gitee: stepGitee, upload: stepUpload,
+    assets: stepAssets, build: stepBuild, sign: stepSign, github: stepGitHub, upload: stepUpload,
   };
 
   try {
@@ -734,7 +724,7 @@ DyCast Android 一键构建 + 发布程序
   raw(`版本      : v${ctx.version}${ctx.versionCode ? ` (versionCode ${ctx.versionCode})` : ''}`);
   if (ctx.signedApk) raw(`APK       : ${ctx.signedApk}`);
   if (ctx.sha256) raw(`SHA-256   : ${ctx.sha256}`);
-  if (ctx.giteeUrl) raw(`Gitee     : ${ctx.giteeUrl}`);
+  if (ctx.githubUrl) raw(`GitHub    : ${ctx.githubUrl}`);
   if (ctx.feishu) raw(`飞书      : ${ctx.feishu.url}`);
   if (ctx.opt.notes) raw(`更新说明  : ${ctx.opt.notes}`);
   raw(`${C.dim}日志文件  : ${ctx.logFile}${C.reset}`);

@@ -9,11 +9,10 @@
 import { invoke } from '@tauri-apps/api/core';
 
 /**
- * 默认热更清单地址：GitHub 仓库 hot/manifest.json（public-clean 分支，与默认分支一致）。
- * 原 Gitee raw 已被平台封禁（403），改走 GitHub；manifest 需随前端构建产物推送到
- * 仓库 `hot/` 目录（由 scripts/make-hot-manifest.mjs 生成后 commit 到默认分支）。
+ * 默认热更清单地址：GitHub Releases 资产直链（国内访问 raw.githubusercontent.com 不稳定，
+ * releases/download 走 github.com 域名更稳；清单与热更文件都作为 v1.4.x-hot Release 资产发布）。
  */
-export const HOT_MANIFEST_URL = 'https://raw.githubusercontent.com/jiuyuanjun/dycast/public-clean/hot/manifest.json';
+export const HOT_MANIFEST_URL = 'https://github.com/jiuyuanjun/dycast/releases/download/v1.4.0-hot/manifest.json';
 
 const BOOT_KEY = 'dycast_hot_boot';
 
