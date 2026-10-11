@@ -17,7 +17,7 @@
   - 签名：Android SDK build-tools（zipalign + apksigner）
   - 调试：adb / emulator / Chrome DevTools Protocol
 - **核心功能**：连接抖音直播间、拉取弹幕/礼物/进入&关注&粉丝团信息、登录抖音账号、横屏三栏直播页。
-- **当前版本**：v1.4.0（versionCode 37；发布渠道：GitHub Releases + 飞书，见第 15 节。**强制规则：所有版本更新后必须同步飞书云盘 + GitHub，见第 4 节**。v1.3.0 为**原生通知后端版**：通知链路下沉 Rust，后台不再依赖 WebView，详见 17.8）
+- **当前版本**：v1.4.1（versionCode 38；发布渠道：GitHub Releases + 飞书，见第 15 节。**强制规则：所有版本更新后必须同步飞书云盘 + GitHub；底层改动全量更新、仅纯前端小改动可热更，见第 4 节**。v1.3.0 为**原生通知后端版**：通知链路下沉 Rust，后台不再依赖 WebView，详见 17.8）
 
 ---
 
@@ -88,9 +88,12 @@
 
 **⚠️ 强制同步规则（硬性要求，任何版本更新后必须执行）**：所有软件版本更新（APK 正式版、热更新包）发布后，**必须同步到飞书云盘和 GitHub 更新渠道**，缺一不可：
 
+- **更新方式分级（用户拍板 2026-10-11）**：
+  - **底层改动（Rust 原生层 / src-tauri / 协议解码等）→ 必须全量更新**（重新打包 APK 发布），**不允许热更新**——Rust 代码在 APK 内，热更只替换前端资源，强行热更会造成前后端版本不一致。
+  - **纯前端小改动（Vue/TS 页面逻辑）→ 才允许使用热更新**。
 - **GitHub 更新渠道**（App 内"检查更新"依赖，不发布则用户永远收不到新版）：
   - APK 正式版 → 创建/更新 GitHub Release（`gh release create vX.Y.Z ...`，`build-apk.cjs` 的 `github` 步骤自动完成）
-  - 热更新包 → 创建/更新 `vX.Y.Z-hot` prerelease 并上传 `manifest.json` + 热更文件（清单 URL 见 `HOT_MANIFEST_URL`）
+  - 热更新包（仅纯前端小改动时）→ 创建/更新 `vX.Y.Z-hot` prerelease 并上传 `manifest.json` + 热更文件（清单 URL 见 `HOT_MANIFEST_URL`）
 - **飞书云盘**（人工/通知分发渠道）：`lark-cli drive +upload` 上传到发布文件夹（folder-token `KUWzf6phnlApZSdAwBActyUrnke`），保留"最新 + 1 个回滚版本"。
 
 未同步任何一侧即视为发布未完成，禁止宣称"已发布/已更新"。
